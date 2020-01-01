@@ -1,29 +1,11 @@
 import sqlite3
 from sqlite3 import Error
 import csv
-#import pandas as pd
+import pandas as pd
 #use dataframe for 
 
 #import numpy as np
-#import pandas as pd
 #import matploblib as mpl
-
-
-# def create_connection(db_file):
-#     """ create a database connection to a SQLite database """
-#     conn = None
-#     try:
-#         conn = sqlite3.connect(db_file)
-#         print(sqlite3.version)
-#         global cur
-#         cur = conn.cursor()
-#     except Error as e:
-#         print(e)
-#     finally:
-#         if conn:
-#             conn.close()
-
-# cur = None
 
 conn = sqlite3.connect('expensesqlite.db')
 c = conn.cursor()
@@ -61,7 +43,7 @@ def handleOption(selectedOption):
     elif selectedOption == "4":
         setCategoryBudget()
     elif selectedOption == "5":
-        setCategoryExpense()
+        addCategoryExpense()
     elif selectedOption == "6":
         showExpenseReportDWMY()
     elif selectedOption == "7":
@@ -78,7 +60,7 @@ def handleOption(selectedOption):
 
 def setMonthlyIncome():
     print(" setMonthlyIncome called")
-    mIncome = input(int("Enter Monthly Income: £"))
+    #mIncome = input(int("Enter Monthly Income: £"))
     # test to see if income has been set already?
     # if it has been set ask the user to confirm if they want to overwrite it ?
     # or set it/reset it
@@ -87,27 +69,47 @@ def setMonthlyIncome():
 def addNewCategory():
     print(" addNewCategory called")
     # get user input 
-    inpCategory = input("Enter Category: ")
-    c.execute("INSERT INTO categories ('name') VALUES ('" + inpCategory + "')")
+    inpCategory = input("Enter new category: ")
+    c.execute("INSERT INTO categories (name) VALUES ('" + inpCategory + "')")
     #inpBudget = input(int("Enter budget for category " + inpCategory + ": "))
     #c.execute("INSERT INTO categories ('budget') VALUES ('" + inpBudget + "')")
     conn.commit()
-    conn.close()
+    #conn.close()
     # and save to db
-    print("Category: " + inpCategory + " has been saved with a budget of ")
+    print("Category '" + inpCategory + "' has been saved")
 
 def listCategories():
     print(" listCategories called")
+    c.execute("SELECT * FROM categories")
+    result = c.fetchall()
+    for result in result:
+        print(result)
+    conn.commit()
+    #conn.close()
     # get list from the database and print to screen - report to screen?
     # handle empty list from the db
 
 def setCategoryBudget():
     print(" setCategoryBudget called")
+    inpCat = input("Enter category to add a budget to: ")
+    inpBudget = input("Enter a budget: ")
+    c.execute("UPDATE categories SET (budget) = (" + inpBudget + ") WHERE name = ('" + inpCat + "')")
+    conn.commit()
+    #conn.close()
+    print("budget has been saved")
     # get input from user of the catgeory and budget to set it against
     # update the db category using the category id to identify the category and update it's budget value
 
-def setCategoryExpense():
-    print(" setCategoryExpense called")
+def addCategoryExpense():
+    print(" addCategoryExpense called")
+    inpName = input("Enter Expense Name: ")
+    inpCat = input("Enter Expense Category: ")
+    inpCost = input("Enter Expense Cost: ")
+    inpDate = input("Enter Expense Date(YYYY-MM-DD): ")
+    c.execute("INSERT INTO expenses (name, category, cost, date) VALUES ('" + inpName + "', '" + inpCat + "', '" + inpCost + "', '" + inpDate + "')")
+    conn.commit()
+    #conn.close()
+    print("New expense has been saved")
     # get input from user of the category and expense and date
     # save to the db
 
@@ -125,6 +127,12 @@ def printPDFReportDWMY():
 
 def showExpenseByCategory():
     print(" showExpenseByCategory called")
+    inpExpenseCat = input("Enter category to view expense of: ")
+    c.execute("SELECT * FROM expenses WHERE category = ('"+ inpExpenseCat +"')")
+    result = c.fetchall()
+    for result in result:
+        print(result)
+    conn.commit()
     # get input from user of specified category
     # query db for expenses in specified category
 
@@ -138,10 +146,6 @@ def exportExpensesToExcel():
     # query db for all data to export to excel using pandas
 
 ################### start program ################################
-# if __name__ == '__main__':
-#     create_connection(
-#         r"expensesqlite.db")
-
 
 print("Welcome to your Expense Manager")
 print("Please choose from the following options:")
@@ -150,6 +154,8 @@ printOptions()
 while True:
     selectedOption = input("Select an option by its key: ")
     if selectedOption == "q":
+        conn.close()
         break
     handleOption(selectedOption)
+    
 ##################################################################
