@@ -2,10 +2,11 @@ import sqlite3
 from sqlite3 import Error
 import csv
 import pandas as pd
-#use dataframe for 
+#use dataframe for
 
-#import numpy as np
+import numpy as np
 #import matploblib as mpl
+import matplotlib.pyplot as plt
 
 conn = sqlite3.connect('expensesqlite.db')
 c = conn.cursor()
