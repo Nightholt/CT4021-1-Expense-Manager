@@ -2,7 +2,7 @@ import sqlite3
 from sqlite3 import Error
 import csv
 import pandas as pd
-from pandas import DataFrame
+from pandas import DataFrame as df
 #use dataframe for
 
 import numpy as np
