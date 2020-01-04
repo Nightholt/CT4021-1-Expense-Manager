@@ -2,6 +2,7 @@ import sqlite3
 from sqlite3 import Error
 import csv
 import pandas as pd
+from pandas import DataFrame
 #use dataframe for
 
 import numpy as np
@@ -19,9 +20,9 @@ options = {
     "4": " - set budget for categories",
     "5": " - enter expenses based on categories",
     "6": " - view expense report day/week/month",
-    "7": " - print expense report to PDF",
+    "7": " - print expense report to PDF by date",
     "8": " - view expense report by category",
-    "9": " - print expense report to PDF",
+    "9": " - print expense report to PDF by category",
     "o": " - See these options again",
     "e": " - Export to Excel",
     "q": " - Quit"
@@ -144,6 +145,7 @@ def printPDFReportByCategory():
 
 def exportExpensesToExcel():
     print(" exportExpensesToExcel called")
+    #df.to_excel(r'Path where you want to store the exported excel file\File Name.xlsx')
     # query db for all data to export to excel using pandas
 
 ################### start program ################################
