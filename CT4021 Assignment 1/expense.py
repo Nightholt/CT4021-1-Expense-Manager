@@ -3,7 +3,7 @@ from sqlite3 import Error
 import csv
 import pandas as pd
 from pandas import DataFrame as df
-# use dataframe for
+# use dataframe for excel
 #import locale
 
 import numpy as np
@@ -13,75 +13,166 @@ import matplotlib.pyplot as plt
 conn = sqlite3.connect('expensesqlite.db')
 c = conn.cursor()
 
+######################### print data ############################
 
 options = {
+    "1": " - Manage Income",
+    "2": " - Manage Expense Categories",
+    "3": " - Manage Expenses",
+    "4": " - Report Options",
+    "e": " - Export to Excel",
+    "o": " - See these options again",
+    "q": " - Quit from any menu\n"
+}
+
+incomeOptions = {
     "Manage Incomes\n"
         "1": " - Set monthly income",
         "2": " - Update current incomes",
-        "3": " - Delete  incomes\n",
+        "3": " - Delete  incomes",
+        "b": " - Back\n"
+    }
+
+categoryOptions = {
     "Manage Expense Categories\n"
-        "4": " - Add new category",
-        "5": " - Update current categories",
-        "6": " - Delete categories",
-        "7": " - Set or update budget for categories\n",
-    "Manage Expenses\n"
-        "8": " - Add new expense",
-        "9": " - Update current expenses",
-        "10": " - Delete expenses",
-        "11": " - View expense report day/week/month",
-        "12": " - View expense report by category",
-        "13": " - Print expense report to PDF by date",
-        "14": " - Print expense report to PDF by category\n",
-    "e": " - Export to Excel",
-    "o": " - See these options again",
-    "q": " - Quit"
+        "1": " - Add new category",
+        "2": " - Update current categories",
+        "3": " - Delete categories",
+        "4": " - Set or update budget for categories",
+        "b": " - Back\n"
 }
 
+expenseOptions = {
+    "Manage Expenses\n"
+        "1": " - Add new expense",
+        "2": " - Update current expenses",
+        "3": " - Delete expenses",
+        "b": " - Back\n"
+}
+
+reportOptions = {
+    "Report Options\n"
+        "1": " - View expense report day/week/month",
+        "2": " - View expense report by category",
+        "3": " - Print expense report to PDF by date",
+        "4": " - Print expense report to PDF by category",
+        "b": " - Back\n"
+}
+
+##################################################################
+
+####################### print options ############################
 
 def printOptions():
     for key in options:
         val = options[key]
         print(key + val)
+    
+    selectedOption=input("Select an option by its key: ")
+    handleOption(selectedOption)
 
+def printIncomeOptions():
+    for key in incomeOptions:
+        val = incomeOptions[key]
+        print(key + val)
+    selectedIncOption=input("Select an option by its key: ")
+    handleOptionIncome(selectedIncOption)
+
+def printCategoryOptions():
+    for key in categoryOptions:
+        val = categoryOptions[key]
+        print(key + val)
+    selectedCatOption=input("Select an option by its key: ")
+    handleOptionCategory(selectedCatOption)
+
+def printExpenseOptions():
+    for key in expenseOptions:
+        val = expenseOptions[key]
+        print(key + val)
+    selectedExpOption=input("Select an option by its key: ")
+    handleOptionExpense(selectedExpOption)
+
+def printReportOptions():
+    for key in reportOptions:
+        val = reportOptions[key]
+        print(key + val)
+    selectedRepOption=input("Select an option by its key: ")
+    handleOptionReport(selectedRepOption)
+
+##################################################################
+
+###################### handle options ############################
 
 def handleOption(selectedOption):
-    #incomes
     if selectedOption == "1":
-        setMonthlyIncome()
+        printIncomeOptions()
     elif selectedOption == "2":
-        updateMonthlyIncome()
+        printCategoryOptions()
     elif selectedOption == "3":
-        deleteMonthlyIncome()
-    #categories
+        printExpenseOptions()
     elif selectedOption == "4":
-        addNewCategory()
-    elif selectedOption == "5":
-        updateCategories()
-    elif selectedOption == "6":
-        deleteCategories()
-    elif selectedOption == "7":
-        setCategoryBudget()
-    #expenses
-    elif selectedOption == "8":
-        addCategoryExpense()
-    elif selectedOption == "9":
-        updateExpense()
-    elif selectedOption == "10":
-        deleteExpense()
-    #reports  
-    elif selectedOption == "11":
-        showExpenseReportDWMY()
-    elif selectedOption == "12":
-        showExpenseByCategory()
-    elif selectedOption == "13":
-        printPDFReportDWMY()
-    elif selectedOption == "14":
-        printPDFReportByCategory()
+        printReportOptions()
     elif selectedOption == "e":
         exportExpensesToExcel()
     elif selectedOption == "o":
         printOptions()
+    elif selectedOption == "q":
+        conn.close()
+        quit
+        
+    
+def handleOptionIncome(selectedIncOption):
+    #incomes
+    if selectedIncOption == "1":
+        setMonthlyIncome()
+    elif selectedIncOption == "2":
+        updateMonthlyIncome()
+    elif selectedIncOption == "3":
+        deleteMonthlyIncome()
+    elif selectedIncOption == "b":
+        printOptions()
 
+def handleOptionCategory(selectedCatOption):
+    #categories
+    if selectedCatOption == "1":
+        addNewCategory()
+    elif selectedCatOption == "2":
+        updateCategories()
+    elif selectedCatOption == "3":
+        deleteCategories()
+    elif selectedCatOption == "4":
+        setCategoryBudget()
+    elif selectedCatOption == "b":
+        printOptions()  
+
+def handleOptionExpense(selectedExpOption):
+    #expenses
+    if selectedExpOption == "1":
+        addCategoryExpense()
+    elif selectedExpOption == "2":
+        updateExpense()
+    elif selectedExpOption == "3":
+        deleteExpense()
+    elif selectedExpOption == "b":
+        printOptions()  
+
+def handleOptionReport(selectedRepOption):
+    #reports  
+    if selectedRepOption == "1":
+        showExpenseReportDWMY()
+    elif selectedRepOption == "2":
+        showExpenseByCategory()
+    elif selectedRepOption == "3":
+        printPDFReportDWMY()
+    elif selectedRepOption == "4":
+        printPDFReportByCategory()
+    elif selectedRepOption == "b":
+        printOptions()  
+    
+
+##################################################################
+
+###################### main functions ############################
 
 def setMonthlyIncome():
     print(" setMonthlyIncome called\n")
@@ -89,6 +180,8 @@ def setMonthlyIncome():
     inpIncome = input("Enter monthly income: £")
     c.execute("INSERT INTO mIncome (source) VALUES ('" + inpSource + "')")
     c.execute("UPDATE mIncome SET (income) = ('" + inpIncome + "') WHERE source = ('" + inpSource + "')")
+    incomeTotal = c.execute("SELECT * FROM mIncome (income)")
+    print(incomeTotal)
     conn.commit()
     print("Source of income has been saved")
     inpMult = input("To add another source of income, enter 'y', \notherwise press keyboard: ")
@@ -245,17 +338,12 @@ def exportExpensesToExcel():
     # df.to_excel(r'Path where you want to store the exported excel file\File Name.xlsx')
     # query db for all data to export to excel using pandas
 
+##################################################################
+
 ################### start program ################################
 
 print("Welcome to your Expense Manager")
 print("Please choose from the following options:\n")
 printOptions()
-
-while True:
-    selectedOption=input("Select an option by its key: ")
-    if selectedOption == "q":
-        conn.close()
-        break
-    handleOption(selectedOption)
 
 ##################################################################
