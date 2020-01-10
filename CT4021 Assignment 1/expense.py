@@ -1,13 +1,15 @@
 import sqlite3
 from sqlite3 import Error
 import csv
+import sys
 from colorama import Fore
 from colorama import Style
 from colorama import AnsiToWin32
 import pandas as pd
 from pandas import DataFrame as df
-# use dataframe for excel
 #import locale
+#from openpyxl.workbook import Workbook
+import xlsxwriter
 
 import numpy as np
 import matplotlib as mpl
@@ -29,7 +31,7 @@ options = {
 }
 
 incomeOptions = {
-    "Manage Incomes\n"
+    "\nManage Incomes\n"
         "1": " - Set monthly income",
         "2": " - Update current incomes",
         "3": " - Delete  incomes",
@@ -56,7 +58,7 @@ expenseOptions = {
 reportOptions = {
     "\nReport Options\n"
         "1": " - View expense report day/week/month",
-        "2": " - View expense report by category",
+        "2": " - View expense report graph",
         "3": " - Print expense report to PDF by date",
         "4": " - Print expense report to PDF by category",
         "b": " - Back\n"
@@ -70,19 +72,22 @@ def printOptions():
     for key in options:
         val = options[key]
         print(key + val)
-    while True:
-        selectedOption=input("Select an option by its key: ")
-        handleOption(selectedOption)
-        if selectedOption == "q":
-            conn.close()
-            break
-
+    selectedOption=input("Select an option by its key: ")
+    handleOption(selectedOption)
+    if selectedOption == "q":
+        conn.close()
+        sys.exit(0)
+        
 def printIncomeOptions():
     for key in incomeOptions:
         val = incomeOptions[key]
         print(key + val)
     selectedIncOption=input("Select an option by its key: ")
     handleOptionIncome(selectedIncOption)
+    if selectedIncOption == "q":
+        conn.close()
+        sys.exit(0)
+
 
 def printCategoryOptions():
     for key in categoryOptions:
@@ -90,6 +95,9 @@ def printCategoryOptions():
         print(key + val)
     selectedCatOption=input("Select an option by its key: ")
     handleOptionCategory(selectedCatOption)
+    if selectedCatOption == "q":
+        conn.close()
+        sys.exit(0)
 
 def printExpenseOptions():
     for key in expenseOptions:
@@ -97,6 +105,9 @@ def printExpenseOptions():
         print(key + val)
     selectedExpOption=input("Select an option by its key: ")
     handleOptionExpense(selectedExpOption)
+    if selectedExpOption == "q":
+        conn.close()
+        sys.exit(0)
 
 def printReportOptions():
     for key in reportOptions:
@@ -104,11 +115,15 @@ def printReportOptions():
         print(key + val)
     selectedRepOption=input("Select an option by its key: ")
     handleOptionReport(selectedRepOption)
+    if selectedRepOption == "q":
+        conn.close()
+        sys.exit(0)
 
 ##################################################################
 
 ###################### handle options ############################
 
+# Decide which menu is called based on user input
 def handleOption(selectedOption):
     if selectedOption == "1":
         printIncomeOptions()
@@ -123,8 +138,6 @@ def handleOption(selectedOption):
     elif selectedOption == "o":
         printOptions()
     
-        
-        
 # Decide which function is called for incomes menu 
 def handleOptionIncome(selectedIncOption):
     if selectedIncOption == "1":
@@ -165,7 +178,7 @@ def handleOptionReport(selectedRepOption):
     if selectedRepOption == "1":
         showExpenseReportDWMY()
     elif selectedRepOption == "2":
-        showExpenseByCategory()
+        graphExpense()
     elif selectedRepOption == "3":
         printPDFReportDWMY()
     elif selectedRepOption == "4":
@@ -189,11 +202,12 @@ def setMonthlyIncome():
     inpIncome = input("Enter monthly income: £")
     c.execute("INSERT INTO mIncome (source) VALUES ('" + inpSource + "')")
     c.execute("UPDATE mIncome SET (income) = ('" + inpIncome + "') WHERE source = ('" + inpSource + "')")
-    incomeTotal = c.execute("SELECT * FROM mIncome (income)")
+    incomeTotal = c.execute("SELECT source,SUM(income) FROM mIncome as total")
+    #c.execute("INSERT INTO mIncome (income) VALUES ('" + incomeTotal + "')")
     print(incomeTotal)
     conn.commit()
     print("Source of income has been saved")
-    inpMult = input("To add another source of income, enter 'y', \notherwise press keyboard: ")
+    inpMult = input("To add another source of income, enter 'y',\n otherwise press keyboard: ")
     if inpMult == ('y' or 'Y'):
         setMonthlyIncome()
     else:
@@ -240,16 +254,12 @@ def tableCategory():
     print(table)
     conn.commit()
 
-# def checkCatExists():
-#     c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
-#     record=c.fetchone()
-
 
 def addNewCategory():
     print(" addNewCategory called\n")
     # get user input
     inpCategory = input("Enter new category: ")
-    # and save to db
+    # and save to db category table
     c.execute("INSERT INTO categories (name) VALUES ('" + inpCategory + "')")
     conn.commit()
     print("Category '" + inpCategory + "' has been saved")
@@ -268,7 +278,7 @@ def updateCategories():
         print("Category has been updated")
     else:
         print("Category does not exist, please try again\n")
-        updateCategories()
+        printOptions()
 
 
 def deleteCategories():
@@ -286,6 +296,7 @@ def deleteCategories():
         deleteCategories()
 
 
+# get input from user of the catgeory and budget to set it against
 def setCategoryBudget():
     print(" setCategoryBudget called\n")
     tableCategory()
@@ -300,8 +311,6 @@ def setCategoryBudget():
         print("Category does not exist, please enter a valid category\n")
         setCategoryBudget()
     
-    # get input from user of the catgeory and budget to set it against
-    # update the db category using the category id to identify the category and update it's budget value
 
 ###################### expense functions ##########################
 def tableExpense():
@@ -374,7 +383,7 @@ def printPDFReportDWMY():
     # query db category expenses and then print the list to a pdf using panda/matploblib ?
 
 
-def showExpenseByCategory():
+def graphExpense():
     print(" showExpenseByCategory called\n")
     inpExpenseCat=input("Enter category to view expense of: ")
     c.execute("SELECT * FROM expenses WHERE category = ('" + inpExpenseCat + "')")
@@ -392,8 +401,21 @@ def printPDFReportByCategory():
 
 def exportExpensesToExcel():
     print(" exportExpensesToExcel called\n")
-    # df.to_excel(r'Path where you want to store the exported excel file\File Name.xlsx')
-    # query db for all data to export to excel using pandas
+    dfTableInc = pd.read_sql_query("SELECT * FROM mIncome", conn)
+    dfTableCat = pd.read_sql_query("SELECT * FROM categories", conn)
+    dfTableExp = pd.read_sql_query("SELECT * FROM expenses", conn)
+    conn.commit()
+    
+    writer = pd.ExcelWriter('expenseSheet.xlsx',engine='xlsxwriter')   
+    workbook=writer.book
+    worksheet=workbook.add_worksheet('Expense Data')
+    writer.sheets['Expense Data'] = worksheet
+    dfTableInc.to_excel(writer,sheet_name='Expense Data',startrow=0 , startcol=0)   
+    dfTableCat.to_excel(writer,sheet_name='Expense Data',startrow=0, startcol=5)
+    dfTableExp.to_excel(writer,sheet_name='Expense Data',startrow=0, startcol=10)
+    workbook.close()
+
+    print("Data with 3 tables exported successfully")
 
 ##################################################################
 
