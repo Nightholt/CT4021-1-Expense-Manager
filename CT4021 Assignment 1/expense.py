@@ -1,6 +1,9 @@
 import sqlite3
 from sqlite3 import Error
 import csv
+from colorama import Fore
+from colorama import Style
+from colorama import AnsiToWin32
 import pandas as pd
 from pandas import DataFrame as df
 # use dataframe for excel
@@ -22,7 +25,7 @@ options = {
     "4": " - Report Options",
     "e": " - Export to Excel",
     "o": " - See these options again",
-    "q": " - Quit from any menu\n"
+    "q": " - Quit\n"
 }
 
 incomeOptions = {
@@ -34,7 +37,7 @@ incomeOptions = {
     }
 
 categoryOptions = {
-    "Manage Expense Categories\n"
+    "\nManage Expense Categories\n"
         "1": " - Add new category",
         "2": " - Update current categories",
         "3": " - Delete categories",
@@ -43,7 +46,7 @@ categoryOptions = {
 }
 
 expenseOptions = {
-    "Manage Expenses\n"
+    "\nManage Expenses\n"
         "1": " - Add new expense",
         "2": " - Update current expenses",
         "3": " - Delete expenses",
@@ -51,7 +54,7 @@ expenseOptions = {
 }
 
 reportOptions = {
-    "Report Options\n"
+    "\nReport Options\n"
         "1": " - View expense report day/week/month",
         "2": " - View expense report by category",
         "3": " - Print expense report to PDF by date",
@@ -67,9 +70,12 @@ def printOptions():
     for key in options:
         val = options[key]
         print(key + val)
-    
-    selectedOption=input("Select an option by its key: ")
-    handleOption(selectedOption)
+    while True:
+        selectedOption=input("Select an option by its key: ")
+        handleOption(selectedOption)
+        if selectedOption == "q":
+            conn.close()
+            break
 
 def printIncomeOptions():
     for key in incomeOptions:
@@ -116,13 +122,11 @@ def handleOption(selectedOption):
         exportExpensesToExcel()
     elif selectedOption == "o":
         printOptions()
-    elif selectedOption == "q":
-        conn.close()
-        quit
-        
     
+        
+        
+# Decide which function is called for incomes menu 
 def handleOptionIncome(selectedIncOption):
-    #incomes
     if selectedIncOption == "1":
         setMonthlyIncome()
     elif selectedIncOption == "2":
@@ -132,8 +136,8 @@ def handleOptionIncome(selectedIncOption):
     elif selectedIncOption == "b":
         printOptions()
 
+# Decide which function is called for categories menu 
 def handleOptionCategory(selectedCatOption):
-    #categories
     if selectedCatOption == "1":
         addNewCategory()
     elif selectedCatOption == "2":
@@ -145,8 +149,8 @@ def handleOptionCategory(selectedCatOption):
     elif selectedCatOption == "b":
         printOptions()  
 
+# Decide which function is called for expenses menu 
 def handleOptionExpense(selectedExpOption):
-    #expenses
     if selectedExpOption == "1":
         addCategoryExpense()
     elif selectedExpOption == "2":
@@ -155,9 +159,9 @@ def handleOptionExpense(selectedExpOption):
         deleteExpense()
     elif selectedExpOption == "b":
         printOptions()  
-
+  
+# Decide which function is called for reports menu   
 def handleOptionReport(selectedRepOption):
-    #reports  
     if selectedRepOption == "1":
         showExpenseReportDWMY()
     elif selectedRepOption == "2":
@@ -172,7 +176,12 @@ def handleOptionReport(selectedRepOption):
 
 ##################################################################
 
-###################### main functions ############################
+###################### income functions ##########################
+
+def tableIncome():
+    table = pd.read_sql_query("SELECT * FROM mIncome", conn)
+    print(table)
+    conn.commit()
 
 def setMonthlyIncome():
     print(" setMonthlyIncome called\n")
@@ -196,9 +205,7 @@ def setMonthlyIncome():
 
 def updateMonthlyIncome():
     print(" updateMonthlyIncome called\n")
-    table = pd.read_sql_query("SELECT * FROM mIncome", conn)
-    print(table)
-    conn.commit()
+    tableIncome()
     inpSource = input("\nEnter income source to update: ")
     c.execute("SELECT EXISTS(SELECT 1 FROM mIncome WHERE source=? LIMIT 1)", (inpSource,))
     record=c.fetchone()
@@ -213,7 +220,29 @@ def updateMonthlyIncome():
 
 
 def deleteMonthlyIncome():
-    print("  called\n")
+    print(" deleteMonthlyIncome called\n")
+    tableIncome()
+    inpSource = input("\nEnter income source to delete: ")
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpSource,))
+    record=c.fetchone()
+    if record[0] == 1:
+        c.execute("DELETE FROM mIncome WHERE name = ('" + inpSource + "')")
+        conn.commit()
+        print("Income source has been deleted")
+    else:
+        print("Source does not exist, please try again\n")
+        deleteMonthlyIncome()
+
+###################### category functions ##########################
+
+def tableCategory():
+    table = pd.read_sql_query("SELECT * FROM categories", conn)
+    print(table)
+    conn.commit()
+
+# def checkCatExists():
+#     c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
+#     record=c.fetchone()
 
 
 def addNewCategory():
@@ -228,9 +257,7 @@ def addNewCategory():
 
 def updateCategories():
     print(" updateCategories called\n")
-    table = pd.read_sql_query("SELECT * FROM categories", conn)
-    print(table)
-    conn.commit()
+    tableCategory()
     inpCategory = input("\nEnter category to update: ")
     c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
     record=c.fetchone()
@@ -245,20 +272,28 @@ def updateCategories():
 
 
 def deleteCategories():
-    print("  called\n")
+    print(" deleteCategories called\n")
+    tableCategory()
+    inpCategory = input("\nEnter category to delete: ")
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
+    record=c.fetchone()
+    if record[0] == 1:
+        c.execute("DELETE FROM categories WHERE name = ('" + inpCategory + "')")
+        conn.commit()
+        print("Category has been deleted")
+    else:
+        print("Category does not exist, please try again\n")
+        deleteCategories()
 
 
 def setCategoryBudget():
     print(" setCategoryBudget called\n")
-    table = pd.read_sql_query("SELECT * FROM categories", conn)
-    print(table)
-    conn.commit()
-    inpCat = input("\nEnter category to add a budget to: ")
-    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCat,))
-    record=c.fetchone()
+    tableCategory()
+    inpCategory = input("\nEnter category to add a budget to: ")
+    checkCatExists()
     if record[0] == 1:
         inpBudget = input("Enter a budget: £")
-        c.execute("UPDATE categories SET (budget) = ('" + inpBudget + "') WHERE name = ('" + inpCat + "')")
+        c.execute("UPDATE categories SET (budget) = ('" + inpBudget + "') WHERE name = ('" + inpCategory + "')")
         conn.commit()
         print("budget has been saved")
     else:
@@ -268,42 +303,64 @@ def setCategoryBudget():
     # get input from user of the catgeory and budget to set it against
     # update the db category using the category id to identify the category and update it's budget value
 
+###################### expense functions ##########################
+def tableExpense():
+    table = pd.read_sql_query("SELECT * FROM expenses", conn)
+    print(table)
+    conn.commit()
+
+def checkExpExists():
+    c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
+    record=c.fetchone()
 
 def addCategoryExpense():
     print(" addCategoryExpense called\n")
-    inpName=input("Enter Expense Name: ")
-    inpCat=input("Enter Expense Category: ")
-    inpCost=input("Enter Expense Cost: ")
-    inpDate=input("Enter Expense Date(YYYY-MM-DD): ")
-    c.execute("INSERT INTO expenses (name, category, cost, date) VALUES ('" + \
-              inpName + "', '" + inpCat + "', '" + inpCost + "', '" + inpDate + "')")
-    conn.commit()
-    # conn.close()
-    print("New expense has been saved")
+    inpName=input("Enter expense name: ")
+    tableCategory()
+    inpCategory=input("\nEnter category to add expense to: ")
+    inpCost=input("Enter expense cost: ")
+    inpDate=input("Enter expense date(YYYY-MM-DD): ")
+    checkCatExists()
+    if record[0] == 1:
+        c.execute("INSERT INTO expenses (name, category, cost, date) VALUES ('" + inpName + "', '" + inpCategory + "', '" + inpCost + "', '" + inpDate + "')")
+        conn.commit()
+        print("New expense has been saved")
+    else:
+        print("Category does not exist, please try again or add new category\n")
+        addCategoryExpense()
     # get input from user of the category and expense and date
     # save to the db
 
 def updateExpense():
     print(" updateExpense called\n")
-    table = pd.read_sql_query("SELECT * FROM expenses", conn)
-    print(table)
-    conn.commit()
+    tableExpense()
     inpExpense = input("\nEnter expense to update: ")
-    c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
-    record=c.fetchone()
+    checkExpExists()
     if record[0] == 1:
         inpNewExpense = input("Enter new expense value: ")
         c.execute("UPDATE expenses SET (name) = ('" + inpNewExpense + "') WHERE name = ('" + inpExpense + "')")
         conn.commit()
         print("Expense has been updated")
     else:
-        print("Expense does not exist, please try again\n")
-        updateCategories()
+        print("Expense does not exist, please try again or add new expense\n")
+        updateExpense()
 
 
 def deleteExpense():
-    print("  called\n")
+    print(" updateExpense called\n")
+    tableExpense()
+    inpExpense = input("\nEnter expense to delete: ")
+    checkExpExists()
+    if record[0] == 1:
+        c.execute("DELETE FROM expenses WHERE name = ('" + inpExpense + "')")
+        conn.commit()
+        print("Expense has been deleted")
+    else:
+        print("Expense does not exist, please try again\n")
+        deleteExpense()
 
+
+###################### report functions ##########################
 
 def showExpenseReportDWMY():
     print(" showExpenseReportDWMY called\n")
