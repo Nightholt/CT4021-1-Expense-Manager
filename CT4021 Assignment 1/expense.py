@@ -322,6 +322,9 @@ def checkExpExists():
     c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
     record=c.fetchone()
 
+def avgExpense():
+    c.execute("SELECT 1 FROM expenses WHERE cost=('" + inpCost + "') LIMIT 1")
+
 def addCategoryExpense():
     print(" addCategoryExpense called\n")
     inpName=input("Enter expense name: ")
@@ -377,27 +380,33 @@ def showExpenseReportDWMY():
     # query db category expenses and output to the Report
 
 
-def printPDFReportDWMY():
+def graphExpense():
+    print(" showExpenseByCategory called\n")
+    dfTableExp = pd.read_sql_query("SELECT * FROM expenses", conn)
+    #plt.hist(dfTableExp.name,dfTableExp.cost,histtype='bar',rwidth=0.8)
+    dfTableExp.plot(kind='bar',x='name',y='cost',color='red')
+    plt.title("Expense Graph")
+    plt.ylabel("Cost (£)")
+    plt.xlabel("Expense")
+    plt.legend()
+    plt.show()
+    conn.commit()
+    # get input from user of specified category
+    # query db for expenses in specified category
+    
+
+    def printPDFReportDWMY():
     print(" printPDFReportDWMY called\n")
     # get input from user of the date
     # query db category expenses and then print the list to a pdf using panda/matploblib ?
 
 
-def graphExpense():
-    print(" showExpenseByCategory called\n")
-    inpExpenseCat=input("Enter category to view expense of: ")
-    c.execute("SELECT * FROM expenses WHERE category = ('" + inpExpenseCat + "')")
-    result=c.fetchall()
-    for result in result:
-        print(result)
-    conn.commit()
-    # get input from user of specified category
-    # query db for expenses in specified category
-
 def printPDFReportByCategory():
     print(" printPDFReportByCategory called\n")
+    
     # get input from user of specified category
     # query db category expenses and then print the list to a pdf using panda/matploblib ?
+
 
 def exportExpensesToExcel():
     print(" exportExpensesToExcel called\n")
