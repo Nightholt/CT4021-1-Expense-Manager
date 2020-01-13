@@ -3,6 +3,7 @@ from sqlite3 import Error
 import sys
 import pandas as pd
 from pandas import DataFrame as df
+import pdfkit as pdf
 from operator import sub
 #import locale
 #from openpyxl.workbook import Workbook
@@ -11,6 +12,7 @@ import xlsxwriter
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 
 conn = sqlite3.connect('expensesqlite.db')
 c = conn.cursor()
@@ -54,10 +56,17 @@ expenseOptions = {
 
 reportOptions = {
     "\nReport Options\n"
-    "1": " - View expense report day/week/month",
-    "2": " - View expense report graph",
-    "3": " - Print expense report to PDF by date",
-    "4": " - Print expense report to PDF by category",
+    "1": " - View expense report graph",
+    "2": " - Print expense report to PDF by date",
+    "3": " - Print expense report to PDF by category",
+    "b": " - Back\n"
+}
+
+reportDateOptions = {
+    "\nExpense Report by Date Options\n"
+    "1": " - View expense report by year",
+    "2": " - View expense report by month",
+    "3": " - ",
     "b": " - Back\n"
 }
 
@@ -131,6 +140,17 @@ def printReportOptions():
         conn.close()
         sys.exit(0)
 
+
+def printRepDateOptions():
+    for key in reportDateOptions:
+        val = reportDateOptions[key]
+        print(key + val)
+    selectedRepDateOption = input("Select an option by its key: ")
+    handleOptionRepDate(selectedRepDateOption)
+    if selectedRepDateOption == "q":
+        conn.close()
+        sys.exit(0)
+
 ##################################################################
 
 ###################### handle options ############################
@@ -149,8 +169,6 @@ def printReportOptions():
 #         handleOptionReport(option):
    
 # Decide which menu is called based on user input
-
-
 def handleOption(selectedOption):
     if selectedOption == "1":
         printIncomeOptions()
@@ -166,8 +184,6 @@ def handleOption(selectedOption):
         printOptions()
 
 # Decide which function is called for incomes menu
-
-
 def handleOptionIncome(selectedIncOption):
     if selectedIncOption == "1":
         setMonthlyIncome()
@@ -179,8 +195,6 @@ def handleOptionIncome(selectedIncOption):
         printOptions()
 
 # Decide which function is called for categories menu
-
-
 def handleOptionCategory(selectedCatOption):
     if selectedCatOption == "1":
         addNewCategory()
@@ -194,8 +208,6 @@ def handleOptionCategory(selectedCatOption):
         printOptions()
 
 # Decide which function is called for expenses menu
-
-
 def handleOptionExpense(selectedExpOption):
     if selectedExpOption == "1":
         addCategoryExpense()
@@ -207,9 +219,18 @@ def handleOptionExpense(selectedExpOption):
         printOptions()
 
 # Decide which function is called for reports menu
-
-
 def handleOptionReport(selectedRepOption):
+    if selectedRepOption == "1":
+        graphExpense()
+    elif selectedRepOption == "2":
+        printPDFReportDWMY()
+    elif selectedRepOption == "3":
+        printPDFReportByCategory()
+    elif selectedRepOption == "b":
+        printOptions()
+
+# 
+def handleOptionRepDate(selectedRepDateOption):
     if selectedRepOption == "1":
         showExpenseReportDWMY()
     elif selectedRepOption == "2":
@@ -220,7 +241,6 @@ def handleOptionReport(selectedRepOption):
         printPDFReportByCategory()
     elif selectedRepOption == "b":
         printOptions()
-
 
 ##################################################################
 
@@ -377,10 +397,10 @@ def addCategoryExpense():
         c.execute("SELECT SUM(cost) FROM expenses WHERE category=('" + inpCategory + "')")
         avgCost = c.fetchone()
         print(avgCost)
-        c.execute("SELECT (budget) FROM categories WHERE name=('" + inpCategory + "') LIMIT 1")
+        c.execute("SELECT SUM(budget) FROM categories WHERE name=('" + inpCategory + "') LIMIT 1")
         avgBudget = c.fetchone()
         print(avgBudget)
-        avgExpense = (avgBudget[1] - avgCost[1],)
+        avgExpense = (avgBudget.iloc[1] - avgCost.iloc[1],)
         avgExpense = tuple(map(sub, avgBudget, avgCost))
         # avgExpense = tuple(np.subtract((avgBudget[0]), (avgCost[0])))
         # c = (a[0] - b[0], a[1] - b[1])
@@ -425,35 +445,54 @@ def deleteExpense():
 
 ###################### report functions ##########################
 
-def showExpenseReportDWMY():
-    print(" showExpenseReportDWMY called\n")
-    # get input from user of the date
-    # query db category expenses and output to the Report
-
-
 def graphExpense():
-    print(" showExpenseByCategory called\n")
+    print(" graphExpense called\n")
     dfTableExp = pd.read_sql_query("SELECT * FROM expenses", conn)
-    # plt.hist(dfTableExp.name,dfTableExp.cost,histtype='bar',rwidth=0.8)
-    dfTableExp.plot(kind='bar', x='name', y='cost', color='red')
-    plt.title("Expense Graph")
-    plt.ylabel("Cost (£)")
-    plt.xlabel("Expense")
-    plt.legend()
-    plt.show()
+    with PdfPages("ExpenseReport.pdf") as pdf:
+        dfTableExp.plot(kind='bar', x='name', y='cost', color='red')
+        plt.title("Graph for all Expenses")
+        plt.ylabel("Cost (£)")
+        plt.xlabel("Expense")
+        plt.legend()
+        pdf.savefig()  # saves the current figure into a pdf page
+        plt.close()
+    # plt.show()
+    # plt.savefig("graph.pdf")
     conn.commit()
     # get input from user of specified category
     # query db for expenses in specified category
 
 def printPDFReportDWMY():
     print(" printPDFReportDWMY called\n")
+
     # get input from user of the date
     # query db category expenses and then print the list to a pdf using panda/matploblib ?
 
 
 def printPDFReportByCategory():
     print(" printPDFReportByCategory called\n")
-
+    tableCategory()
+    inpRepCat = input("Enter category to view expense report of: ")
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpRepCat,))
+    record = c.fetchone()
+    if record[0] == 1:
+        dfTableExpCat = pd.read_sql_query("SELECT * FROM expenses WHERE category=('" + inpRepCat + "')", conn)
+        with PdfPages("ExpenseReport.pdf") as pdf:
+            dfTableExpCat.plot(kind='bar', x='name', y='cost', color='red')
+            plt.title("Expenses for Category: " + inpRepCat)
+            plt.ylabel("Cost (£)")
+            plt.xlabel("Expense")
+            plt.legend()
+            pdf.savefig()  # saves the current figure into a new page in pdf 
+            plt.close()
+        conn.commit()
+        #     dfTableExpCat.savefig("categoryExp.pdf")
+        # dfTableExpCat.to_html('category.html')
+        # categoryExpRep='categoryExpRep.pdf'
+        # pdf.from_file('category.html', categoryExpRep)
+    else:
+        print("Category does not exist, please try again or add new category\n")
+        printReportOptions()
     # get input from user of specified category
     # query db category expenses and then print the list to a pdf using panda/matploblib ?
 
