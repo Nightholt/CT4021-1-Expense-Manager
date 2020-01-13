@@ -69,15 +69,15 @@ reportOptions = {
 ####################### print options ############################
 
 
-def printOptionsFunc(action, optionsArr):
-    for key in optionsArr:
-        val = optionsArr[key]
-        print(key + val)
-    selectedOption = input("Select an option by its key: ")
-    handleOptions(action, selectedOption)
-    if selectedOption == "q":
-        conn.close()
-        sys.exit(0)
+# def printOptionsFunc(action, optionsArr):
+#     for key in optionsArr:
+#         val = optionsArr[key]
+#         print(key + val)
+#     selectedOption = input("Select an option by its key: ")
+#     handleOptions(action, selectedOption)
+#     if selectedOption == "q":
+#         conn.close()
+#         sys.exit(0)
 
 
 def printOptions():
@@ -139,17 +139,17 @@ def printReportOptions():
 ###################### handle options ############################
 
 
-def handleOptions(action, option):
-    if action == "standard"
-        handleOption(option):
-    elif action == "income"
-        handleOptionIncome(option):
-    elif action == "category"
-        handleOptionCategory(option):
-    elif action == "expense"
-        handleOptionExpense(option):
-    elif action == "report"
-        handleOptionReport(option):
+# def handleOptions(action, option):
+#     if action == "standard"
+#         handleOption(option):
+#     elif action == "income"
+#         handleOptionIncome(option):
+#     elif action == "category"
+#         handleOptionCategory(option):
+#     elif action == "expense"
+#         handleOptionExpense(option):
+#     elif action == "report"
+#         handleOptionReport(option):
    
 # Decide which menu is called based on user input
 
@@ -240,15 +240,13 @@ def setMonthlyIncome():
     inpSource = input("Enter income source: ")
     inpIncome = input("Enter monthly income: £")
     c.execute("INSERT INTO mIncome (source) VALUES ('" + inpSource + "')")
-    c.execute("UPDATE mIncome SET (income) = ('" + inpIncome +
-              "') WHERE source = ('" + inpSource + "')")
+    c.execute("UPDATE mIncome SET (income) = ('" + inpIncome +"') WHERE source = ('" + inpSource + "')")
     incomeTotal = c.execute("SELECT source,SUM(income) FROM mIncome as total")
     #c.execute("INSERT INTO mIncome (income) VALUES ('" + incomeTotal + "')")
     print(incomeTotal)
     conn.commit()
     print("Source of income has been saved")
-    inpMult = input(
-        "To add another source of income, enter 'y',\n otherwise press keyboard: ")
+    inpMult = input("To add another source of income, enter 'y',\n otherwise press keyboard: ")
     if inpMult == ('y' or 'Y'):
         setMonthlyIncome()
     else:
@@ -262,13 +260,11 @@ def updateMonthlyIncome():
     print(" updateMonthlyIncome called\n")
     tableIncome()
     inpSource = input("\nEnter income source to update: ")
-    c.execute(
-        "SELECT EXISTS(SELECT 1 FROM mIncome WHERE source=? LIMIT 1)", (inpSource,))
+    c.execute("SELECT EXISTS(SELECT 1 FROM mIncome WHERE source=? LIMIT 1)", (inpSource,))
     record = c.fetchone()
     if record[0] == 1:
         inpIncome = input("Enter a new income: £")
-        c.execute("UPDATE mIncome SET (income) = (" + inpIncome +
-                  ") WHERE source = ('" + inpSource + "')")
+        c.execute("UPDATE mIncome SET (income) = (" + inpIncome +") WHERE source = ('" + inpSource + "')")
         conn.commit()
         print("Income has been updated")
     else:
@@ -280,8 +276,7 @@ def deleteMonthlyIncome():
     print(" deleteMonthlyIncome called\n")
     tableIncome()
     inpSource = input("\nEnter income source to delete: ")
-    c.execute(
-        "SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpSource,))
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpSource,))
     record = c.fetchone()
     if record[0] == 1:
         c.execute("DELETE FROM mIncome WHERE name = ('" + inpSource + "')")
@@ -314,8 +309,7 @@ def updateCategories():
     print(" updateCategories called\n")
     tableCategory()
     inpCategory = input("\nEnter category to update: ")
-    c.execute(
-        "SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
     record = c.fetchone()
     if record[0] == 1:
         inpNewCategory = input("Enter new category name: ")
@@ -325,7 +319,7 @@ def updateCategories():
         print("Category has been updated")
     else:
         print("Category does not exist, please try again\n")
-        printOptions()
+        updateCategories()
 
 
 def deleteCategories():
@@ -349,11 +343,10 @@ def setCategoryBudget():
     print(" setCategoryBudget called\n")
     tableCategory()
     inpCategory = input("\nEnter category to add a budget to: ")
-    checkCatExists()
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
     if record[0] == 1:
         inpBudget = input("Enter a budget: £")
-        c.execute("UPDATE categories SET (budget) = ('" +
-                  inpBudget + "') WHERE name = ('" + inpCategory + "')")
+        c.execute("UPDATE categories SET (budget) = ('" + inpBudget + "') WHERE name = ('" + inpCategory + "')")
         conn.commit()
         print("budget has been saved")
     else:
@@ -369,27 +362,30 @@ def tableExpense():
 
 
 def checkExpExists():
-    c.execute(
-        "SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
+    c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
     record = c.fetchone()
-
-
-    
 
 
 def addCategoryExpense():
     print(" addCategoryExpense called\n")
-    inpName = input("Enter expense name: ")
+    inpExpense = input("Enter expense name: ")
     tableCategory()
     inpCategory = input("\nEnter category to add expense to: ")
     inpCost = input("Enter expense cost: ")
     inpDate = input("Enter expense date(YYYY-MM-DD): ")
-    checkCatExists()
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
+    record = c.fetchone()
     if record[0] == 1:
-        c.execute("INSERT INTO expenses (name, category, cost, date) VALUES ('" + inpName + "', '" + inpCategory + "', '" + inpCost + "', '" + inpDate + "')")
-        avgCost = c.execute("SELECT 1 FROM expenses WHERE cost=('" + inpCost + "') LIMIT 1")
-        avgBudget = c.execute("SELECT (budget) FROM categories WHERE name=('" + inpCategory + "') LIMIT 1")
-        avgExpense = (avgBudget - avgCost)
+        c.execute("INSERT INTO expenses (name, category, cost, date) VALUES ('" + inpExpense + "', '" + inpCategory + "', '" + inpCost + "', '" + inpDate + "')")
+        c.execute("SELECT SUM(cost) FROM expenses WHERE category=('" + inpCategory + "')")
+        avgCost = c.fetchone()
+        print(avgCost)
+        c.execute("SELECT (budget) FROM categories WHERE name=('" + inpCategory + "') LIMIT 1")
+        avgBudget = c.fetchone()
+        print(avgBudget)
+        avgExpense = (avgBudget[1] - avgCost[1])
+        # c = (a[0] - b[0], a[1] - b[1])
+        c.execute("UPDATE expenses SET (overUnder) = ('" + avgExpense + "') WHERE category=('" + inpCategory + "')")
         conn.commit()
         print("New expense has been saved")
     else:
@@ -403,11 +399,10 @@ def updateExpense():
     print(" updateExpense called\n")
     tableExpense()
     inpExpense = input("\nEnter expense to update: ")
-    checkExpExists()
+    c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
     if record[0] == 1:
         inpNewExpense = input("Enter new expense value: ")
-        c.execute("UPDATE expenses SET (name) = ('" +
-                  inpNewExpense + "') WHERE name = ('" + inpExpense + "')")
+        c.execute("UPDATE expenses SET (name) = ('" +inpNewExpense + "') WHERE name = ('" + inpExpense + "')")
         conn.commit()
         print("Expense has been updated")
     else:
@@ -419,7 +414,7 @@ def deleteExpense():
     print(" updateExpense called\n")
     tableExpense()
     inpExpense = input("\nEnter expense to delete: ")
-    checkExpExists()
+    c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
     if record[0] == 1:
         c.execute("DELETE FROM expenses WHERE name = ('" + inpExpense + "')")
         conn.commit()
@@ -451,7 +446,7 @@ def graphExpense():
     # get input from user of specified category
     # query db for expenses in specified category
 
-    def printPDFReportDWMY():
+def printPDFReportDWMY():
     print(" printPDFReportDWMY called\n")
     # get input from user of the date
     # query db category expenses and then print the list to a pdf using panda/matploblib ?
@@ -475,12 +470,9 @@ def exportExpensesToExcel():
     workbook = writer.book
     worksheet = workbook.add_worksheet('Expense Data')
     writer.sheets['Expense Data'] = worksheet
-    dfTableInc.to_excel(writer, sheet_name='Expense Data',
-                        startrow=0, startcol=0)
-    dfTableCat.to_excel(writer, sheet_name='Expense Data',
-                        startrow=0, startcol=5)
-    dfTableExp.to_excel(writer, sheet_name='Expense Data',
-                        startrow=0, startcol=10)
+    dfTableInc.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=0)
+    dfTableCat.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=5)
+    dfTableExp.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=10)
     workbook.close()
 
     print("Data with 3 tables exported successfully")
@@ -495,19 +487,19 @@ print("Please choose from the following options:\n")
 printOptions()
 
 ##choose the following based on the input from user?
-input = "standard"
-printOptionsFunc(input, options)
+# input = "standard"
+# printOptionsFunc(input, options)
 
-input = "income"
-printOptionsFunc(input, incomeOptions)
+# input = "income"
+# printOptionsFunc(input, incomeOptions)
 
-input = "category"
-printOptionsFunc(input, categoryOptions)
+# input = "category"
+# printOptionsFunc(input, categoryOptions)
 
-input = "expense"
-printOptionsFunc(input, expenseOptions)
+# input = "expense"
+# printOptionsFunc(input, expenseOptions)
 
-input = "report"
-printOptionsFunc(input, reportOptions)
+# input = "report"
+# printOptionsFunc(input, reportOptions)
 
 ##################################################################
