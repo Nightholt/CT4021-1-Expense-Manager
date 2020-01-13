@@ -322,8 +322,7 @@ def checkExpExists():
     c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
     record=c.fetchone()
 
-def avgExpense():
-    c.execute("SELECT 1 FROM expenses WHERE cost=('" + inpCost + "') LIMIT 1")
+    
 
 def addCategoryExpense():
     print(" addCategoryExpense called\n")
@@ -335,6 +334,9 @@ def addCategoryExpense():
     checkCatExists()
     if record[0] == 1:
         c.execute("INSERT INTO expenses (name, category, cost, date) VALUES ('" + inpName + "', '" + inpCategory + "', '" + inpCost + "', '" + inpDate + "')")
+        avgCost = c.execute("SELECT 1 FROM expenses WHERE cost=('" + inpCost + "') LIMIT 1")
+        avgBudget = c.execute("SELECT (budget) FROM categories WHERE name=('" + inpCategory + "') LIMIT 1")
+        avgExpense = (avgBudget - avgCost)
         conn.commit()
         print("New expense has been saved")
     else:
