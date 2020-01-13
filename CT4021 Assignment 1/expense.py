@@ -1,12 +1,9 @@
 import sqlite3
 from sqlite3 import Error
-import csv
 import sys
-from colorama import Fore
-from colorama import Style
-from colorama import AnsiToWin32
 import pandas as pd
 from pandas import DataFrame as df
+from operator import sub
 #import locale
 #from openpyxl.workbook import Workbook
 import xlsxwriter
@@ -383,7 +380,9 @@ def addCategoryExpense():
         c.execute("SELECT (budget) FROM categories WHERE name=('" + inpCategory + "') LIMIT 1")
         avgBudget = c.fetchone()
         print(avgBudget)
-        avgExpense = (avgBudget[1] - avgCost[1])
+        avgExpense = (avgBudget[1] - avgCost[1],)
+        avgExpense = tuple(map(sub, avgBudget, avgCost))
+        # avgExpense = tuple(np.subtract((avgBudget[0]), (avgCost[0])))
         # c = (a[0] - b[0], a[1] - b[1])
         c.execute("UPDATE expenses SET (overUnder) = ('" + avgExpense + "') WHERE category=('" + inpCategory + "')")
         conn.commit()
