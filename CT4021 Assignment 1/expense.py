@@ -309,7 +309,7 @@ def deleteMonthlyIncome():
 
 
 def tableCategory():
-    table = pd.read_sql_query("SELECT * FROM categories", conn)
+    table = pd.read_sql_query("SELECT (name) FROM categories", conn)
     print(table)
     conn.commit()
 
@@ -396,11 +396,15 @@ def addCategoryExpense():
     record = c.fetchone()
     if record[0] == 1:
         c.execute("INSERT INTO expenses (name, category, cost, date) VALUES ('" + inpExpense + "', '" + inpCategory + "', '" + inpCost + "', '" + inpDate + "')")
+        avgCost = pd.read_sql_query("SELECT (cost) FROM expenses WHERE name=('" + inpExpense + "')", conn)
+        avgBudget = pd.read_sql_query("SELECT (budget) FROM categories WHERE name=('" + inpCategory + "') LIMIT 1", conn)
+        avgExpense = (avgBudget.iloc[0,0] - avgCost.iloc[0,0])
+        c.execute("INSERT INTO overUnder (name, category, overUnder) VALUES ('" + inpExpense + "', '" + inpCategory + "', '" + str(round(avgExpense, 2)) + "')")
         conn.commit()
         print("New expense has been saved")
     else:
         print("Category does not exist, please try again or add new category\n")
-        addCategoryExpense()
+        printExpenseOptions()
     # get input from user of the category and expense and date
     # save to the db
 
@@ -408,25 +412,41 @@ def addCategoryExpense():
 def updateExpense():
     print(" updateExpense called\n")
     tableExpense()
-    inpExpense = input("\nEnter expense to update: ")
+    inpExpense = input("\nEnter expense to update (case sensitive): ")
     c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
+    record = c.fetchone()
     if record[0] == 1:
-        inpNewExpense = input("Enter new expense value: ")
-        c.execute("UPDATE expenses SET (name) = ('" +inpNewExpense + "') WHERE name = ('" + inpExpense + "')")
-        conn.commit()
-        print("Expense has been updated")
+        inpNewExpName = input("Enter new expense name: ")
+        tableCategory()
+        inpNewExpCat = input("Enter new expense category: ")
+        inpNewExpCost = input("Enter new expense cost: ")
+        c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpNewExpCat,))
+        record = c.fetchone()
+        if record[0] == 1:
+            c.execute("UPDATE expenses SET (name, category, cost) = ('"+ inpNewExpName +"', '"+ inpNewExpCat +"', '"+ inpNewExpCost +"') WHERE name = ('"+ inpExpense +"')")
+            avgCost = pd.read_sql_query("SELECT (cost) FROM expenses WHERE name=('"+ inpNewExpName +"')", conn)
+            avgBudget = pd.read_sql_query("SELECT (budget) FROM categories WHERE name=('" + inpNewExpCat + "') LIMIT 1", conn)
+            avgExpense = (avgBudget.iloc[0,0] - avgCost.iloc[0,0])
+            c.execute("UPDATE overUnder SET (name, category, overUnder) = ('"+ inpNewExpName +"', '"+ inpNewExpCat +"','"+ str(round(avgExpense, 2)) +"') WHERE name = ('"+ inpExpense +"')")
+            conn.commit()
+            print("Expense has been updated")
+            printOptions()
+        else:
+            print("Category does not exist, please try again or add new Category\n")
+            printExpenseOptions()
     else:
         print("Expense does not exist, please try again or add new expense\n")
-        updateExpense()
+        printExpenseOptions()
 
 
 def deleteExpense():
-    print(" updateExpense called\n")
+    print(" deleteExpense called\n")
     tableExpense()
-    inpExpense = input("\nEnter expense to delete: ")
+    inpExpense = input("\nEnter expense to delete (case sensitive): ")
     c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
     if record[0] == 1:
         c.execute("DELETE FROM expenses WHERE name = ('" + inpExpense + "')")
+        c.execute("DELETE FROM overUnder WHERE name = ('" + inpExpense + "')")
         conn.commit()
         print("Expense has been deleted")
     else:
@@ -446,7 +466,7 @@ def graphExpense():
         plt.xlabel("Expense")
         plt.legend()
         pdf.savefig()  # saves the current figure into a pdf page
-        # plt.close()
+        plt.close()
     # plt.show()
     # plt.savefig("graph.pdf")
     conn.commit()
@@ -512,15 +532,17 @@ def avgOverUnder():
         avgBudget = pd.read_sql_query("SELECT (budget) FROM categories WHERE name=('" + inpRepOverUnder + "') LIMIT 1", conn)
         print(avgBudget)
         avgExpense = (avgBudget.iloc[0,0] - avgCost.iloc[0,0])
-        print(avgExpense)
-        with PdfPages("ExpenseReport.pdf") as pdf:
-            avgExpense.plot(kind='bar', x='name', y='cost', color='blue')
-            plt.title("Expenses for Category: " + inpRepOverUnder)
-            plt.ylabel("Cost (£)")
-            plt.xlabel("Expense")
-            plt.legend()
-            pdf.savefig()  # saves the current figure into a new page in pdf 
-            plt.close()
+        print(round(avgExpense, 2))
+        c.execute("UPDATE expenses SET (overUnder) = ('"+ str(round(avgExpense, 2)) +"') WHERE category = ('"+ inpRepOverUnder +"')")
+        # with PdfPages("ExpenseReport.pdf") as pdf:
+        #     avgExpense.plot(kind='bar', x='name', y='cost', color='blue')
+        #     plt.title("Expenses for Category: " + inpRepOverUnder)
+        #     plt.ylabel("Cost (£)")
+        #     plt.xlabel("Expense")
+        #     plt.legend()
+        #     pdf.savefig() # saves the current figure into a new page in pdf 
+        #     plt.close()
+        conn.commit()
     else:
         print("Category does not exist, please try again or add new category\n")
         printReportOptions()
