@@ -226,6 +226,8 @@ def handleOptionReport(selectedRepOption):
         printPDFReportDWMY()
     elif selectedRepOption == "3":
         printPDFReportByCategory()
+    elif selectedRepOption == "4":
+        avgOverUnder()
     elif selectedRepOption == "b":
         printOptions()
 
@@ -394,17 +396,6 @@ def addCategoryExpense():
     record = c.fetchone()
     if record[0] == 1:
         c.execute("INSERT INTO expenses (name, category, cost, date) VALUES ('" + inpExpense + "', '" + inpCategory + "', '" + inpCost + "', '" + inpDate + "')")
-        c.execute("SELECT SUM(cost) FROM expenses WHERE category=('" + inpCategory + "')")
-        avgCost = c.fetchone()
-        print(avgCost)
-        c.execute("SELECT SUM(budget) FROM categories WHERE name=('" + inpCategory + "') LIMIT 1")
-        avgBudget = c.fetchone()
-        print(avgBudget)
-        avgExpense = (avgBudget.iloc[1] - avgCost.iloc[1],)
-        avgExpense = tuple(map(sub, avgBudget, avgCost))
-        # avgExpense = tuple(np.subtract((avgBudget[0]), (avgCost[0])))
-        # c = (a[0] - b[0], a[1] - b[1])
-        c.execute("UPDATE expenses SET (overUnder) = ('" + avgExpense + "') WHERE category=('" + inpCategory + "')")
         conn.commit()
         print("New expense has been saved")
     else:
@@ -455,10 +446,12 @@ def graphExpense():
         plt.xlabel("Expense")
         plt.legend()
         pdf.savefig()  # saves the current figure into a pdf page
-        plt.close()
+        # plt.close()
     # plt.show()
     # plt.savefig("graph.pdf")
     conn.commit()
+    print("Report generated in directory\n")
+    printOptions()
     # get input from user of specified category
     # query db for expenses in specified category
 
@@ -477,8 +470,17 @@ def printPDFReportByCategory():
     record = c.fetchone()
     if record[0] == 1:
         dfTableExpCat = pd.read_sql_query("SELECT * FROM expenses WHERE category=('" + inpRepCat + "')", conn)
+        dfTableExp = pd.read_sql_query("SELECT * FROM expenses", conn)
         with PdfPages("ExpenseReport.pdf") as pdf:
-            dfTableExpCat.plot(kind='bar', x='name', y='cost', color='red')
+            # dfTableExp.plot(kind='bar', x='name', y='cost', color='red')
+            # plt.title("Graph for all Expenses")
+            # plt.ylabel("Cost (£)")
+            # plt.xlabel("Expense")
+            # plt.legend()
+            # pdf.savefig()  # saves the current figure into a pdf page
+            
+
+            dfTableExpCat.plot(kind='bar', x='name', y='cost', color='blue')
             plt.title("Expenses for Category: " + inpRepCat)
             plt.ylabel("Cost (£)")
             plt.xlabel("Expense")
@@ -486,6 +488,8 @@ def printPDFReportByCategory():
             pdf.savefig()  # saves the current figure into a new page in pdf 
             plt.close()
         conn.commit()
+        print("Report generated in directory\n")
+        printOptions()
         #     dfTableExpCat.savefig("categoryExp.pdf")
         # dfTableExpCat.to_html('category.html')
         # categoryExpRep='categoryExpRep.pdf'
@@ -495,6 +499,31 @@ def printPDFReportByCategory():
         printReportOptions()
     # get input from user of specified category
     # query db category expenses and then print the list to a pdf using panda/matploblib ?
+
+def avgOverUnder():
+    print(" avgOverUnder called\n")
+    tableCategory()
+    inpRepOverUnder = input("Enter category to view over/under report of: ")
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpRepOverUnder,))
+    record = c.fetchone()
+    if record[0] == 1:
+        avgCost = pd.read_sql_query("SELECT SUM(cost) FROM expenses WHERE category=('" + inpRepOverUnder + "')", conn)
+        print(avgCost)
+        avgBudget = pd.read_sql_query("SELECT (budget) FROM categories WHERE name=('" + inpRepOverUnder + "') LIMIT 1", conn)
+        print(avgBudget)
+        avgExpense = (avgBudget.iloc[0,0] - avgCost.iloc[0,0])
+        print(avgExpense)
+        with PdfPages("ExpenseReport.pdf") as pdf:
+            avgExpense.plot(kind='bar', x='name', y='cost', color='blue')
+            plt.title("Expenses for Category: " + inpRepOverUnder)
+            plt.ylabel("Cost (£)")
+            plt.xlabel("Expense")
+            plt.legend()
+            pdf.savefig()  # saves the current figure into a new page in pdf 
+            plt.close()
+    else:
+        print("Category does not exist, please try again or add new category\n")
+        printReportOptions()
 
 
 def exportExpensesToExcel():
