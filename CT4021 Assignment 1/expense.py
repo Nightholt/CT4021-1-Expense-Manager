@@ -56,9 +56,10 @@ expenseOptions = {
 
 reportOptions = {
     "\nReport Options\n"
-    "1": " - View expense report graph",
+    "1": " - Print all expenses report to pdf",
     "2": " - Print expense report to PDF by date",
     "3": " - Print expense report to PDF by category",
+    "4": " - Print over/under report to PDF",
     "b": " - Back\n"
 }
 
@@ -66,7 +67,7 @@ reportDateOptions = {
     "\nExpense Report by Date Options\n"
     "1": " - View expense report by year",
     "2": " - View expense report by month",
-    "3": " - ",
+    "3": " - View expense report by day",
     "b": " - Back\n"
 }
 
@@ -140,16 +141,6 @@ def printReportOptions():
         conn.close()
         sys.exit(0)
 
-
-def printRepDateOptions():
-    for key in reportDateOptions:
-        val = reportDateOptions[key]
-        print(key + val)
-    selectedRepDateOption = input("Select an option by its key: ")
-    handleOptionRepDate(selectedRepDateOption)
-    if selectedRepDateOption == "q":
-        conn.close()
-        sys.exit(0)
 
 ##################################################################
 
@@ -231,18 +222,6 @@ def handleOptionReport(selectedRepOption):
     elif selectedRepOption == "b":
         printOptions()
 
-# 
-def handleOptionRepDate(selectedRepDateOption):
-    if selectedRepOption == "1":
-        showExpenseReportDWMY()
-    elif selectedRepOption == "2":
-        graphExpense()
-    elif selectedRepOption == "3":
-        printPDFReportDWMY()
-    elif selectedRepOption == "4":
-        printPDFReportByCategory()
-    elif selectedRepOption == "b":
-        printOptions()
 
 ##################################################################
 
@@ -374,15 +353,11 @@ def setCategoryBudget():
 
 
 ###################### expense functions ##########################
+
 def tableExpense():
     table = pd.read_sql_query("SELECT * FROM expenses", conn)
     print(table)
     conn.commit()
-
-
-def checkExpExists():
-    c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
-    record = c.fetchone()
 
 
 def addCategoryExpense():
@@ -423,11 +398,16 @@ def updateExpense():
         c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpNewExpCat,))
         record = c.fetchone()
         if record[0] == 1:
-            c.execute("UPDATE expenses SET (name, category, cost) = ('"+ inpNewExpName +"', '"+ inpNewExpCat +"', '"+ inpNewExpCost +"') WHERE name = ('"+ inpExpense +"')")
             avgCost = pd.read_sql_query("SELECT (cost) FROM expenses WHERE name=('"+ inpNewExpName +"')", conn)
+            totCost = pd.read_sql_query("SELECT SUM(cost) FROM expenses WHERE category=('"+ inpNewExpCat +"')", conn)
             avgBudget = pd.read_sql_query("SELECT (budget) FROM categories WHERE name=('" + inpNewExpCat + "') LIMIT 1", conn)
             avgExpense = (avgBudget.iloc[0,0] - avgCost.iloc[0,0])
-            c.execute("UPDATE overUnder SET (name, category, overUnder) = ('"+ inpNewExpName +"', '"+ inpNewExpCat +"','"+ str(round(avgExpense, 2)) +"') WHERE name = ('"+ inpExpense +"')")
+            totExpense = (avgBudget.iloc[0,0] - totCost.iloc[0,0])
+            c.execute("UPDATE expenses SET (name, category, cost, overUnder) = ('"+ inpNewExpName +"', '"+ inpNewExpCat +"', '"+ inpNewExpCost +"', '"+ str(round(avgExpense, 2)) +"') WHERE name = ('"+ inpExpense +"')")
+            c.execute("UPDATE expenses SET (catTotal) = ('"+ str(round(totExpense, 2)) +"') WHERE category=('"+ inpNewExpCat +"')")
+
+            # c.execute("UPDATE overUnder SET (name, category, overUnder, catTotal) = ('"+ inpNewExpName +"', '"+ inpNewExpCat +"','"+ str(round(avgExpense, 2)) +"' ,'"+ str(round(totExpense, 2)) +"') WHERE name = ('"+ inpExpense +"')")
+            # c.execute("UPDATE overUnder SET (catTotal) = ('"+ str(round(totExpense, 2)) +"') WHERE category=('"+ inpNewExpCat +"')")
             conn.commit()
             print("Expense has been updated")
             printOptions()
@@ -477,7 +457,42 @@ def graphExpense():
 
 def printPDFReportDWMY():
     print(" printPDFReportDWMY called\n")
+    for key in reportDateOptions:
+        val = reportDateOptions[key]
+        print(key + val)
+    selectedRepDateOption = input("Select an option by its key: ")
+    if selectedRepDateOption == "q":
+        conn.close()
+        sys.exit(0)
+    elif selectedRepDateOption == "1":
+        #year func
+        inpYear = input("Enter year to view expenses of (YYYY): ")
 
+    elif selectedRepDateOption == "2":
+        #month func
+        inpMonth = input("Enter month to view expenses of (YYYY-MM): ")
+
+    elif selectedRepDateOption == "3":
+        #day
+        inpDay = input("Enter day to view expenses of (YYYY-MM-DD): ")
+        c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE date=? LIMIT 1)", (inpDay,))
+        record = c.fetchone()
+        if record[0] == 1:
+            dfDateExp = pd.read_sql_query("SELECT * FROM expenses WHERE date=('" + inpDay + "')", conn)
+            with PdfPages("Date Expense Report.pdf") as pdf:
+                dfDateExp.plot(kind='bar', x='name', y='cost', color='red')
+                plt.title("Expenses from "+ inpDay +"")
+                plt.ylabel("Cost (£)")
+                plt.xlabel("Expense")
+                plt.legend()
+                pdf.savefig()
+                plt.close()
+        else:
+            print("Date does not exist, please try again or add expense")
+            printReportOptions()
+
+    elif selectedRepDateOption == "b":
+        printReportOptions()
     # get input from user of the date
     # query db category expenses and then print the list to a pdf using panda/matploblib ?
 
@@ -524,25 +539,30 @@ def avgOverUnder():
     print(" avgOverUnder called\n")
     tableCategory()
     inpRepOverUnder = input("Enter category to view over/under report of: ")
+    inpRepDate1 = input("Enter date to view over/under range from (YYYY-MM-DD): ")
+    inpRepDate2 = input("Enter date to view over/under range to (YYYY-MM-DD): ")
     c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpRepOverUnder,))
+    #c.execute("SELECT EXISTS(SELECT * FROM expenses WHERE date=? AND category=? )", ( "BETWEEN" inpRepDate1 "AND" inpRepDate2 , inpRepOverUnder,))
     record = c.fetchone()
     if record[0] == 1:
-        avgCost = pd.read_sql_query("SELECT SUM(cost) FROM expenses WHERE category=('" + inpRepOverUnder + "')", conn)
-        print(avgCost)
-        avgBudget = pd.read_sql_query("SELECT (budget) FROM categories WHERE name=('" + inpRepOverUnder + "') LIMIT 1", conn)
-        print(avgBudget)
-        avgExpense = (avgBudget.iloc[0,0] - avgCost.iloc[0,0])
-        print(round(avgExpense, 2))
-        c.execute("UPDATE expenses SET (overUnder) = ('"+ str(round(avgExpense, 2)) +"') WHERE category = ('"+ inpRepOverUnder +"')")
-        # with PdfPages("ExpenseReport.pdf") as pdf:
-        #     avgExpense.plot(kind='bar', x='name', y='cost', color='blue')
-        #     plt.title("Expenses for Category: " + inpRepOverUnder)
-        #     plt.ylabel("Cost (£)")
-        #     plt.xlabel("Expense")
-        #     plt.legend()
-        #     pdf.savefig() # saves the current figure into a new page in pdf 
-        #     plt.close()
+        # c.execute("SELECT EXISTS(SELECT * FROM expenses WHERE date= (BETWEEN ('"+ inpRepDate1 +"') AND ('"+ inpRepDate2 +"')) AND category=? )", (inpRepOverUnder,))
+        # record = c.fetchone()
+        # if record[0] == 1:
+        #c.execute("SELECT * FROM expenses WHERE category =('"+ inpRepOverUnder +"') AND date BETWEEN '"+ inpRepDate1 +"' AND '"+ inpRepDate2 +"' ")
+        dfTableDate = pd.read_sql_query("SELECT * FROM expenses WHERE category =('"+ inpRepOverUnder +"') AND date BETWEEN '"+ inpRepDate1 +"' AND '"+ inpRepDate2 +"' ", conn)
+        with PdfPages("OverUnder "+ inpRepOverUnder +".pdf") as pdf:
+            colours = ['blue' if ( y >0) else 'red']
+            dfTableDate.plot(kind='bar', x='name', y='overUnder', color= colours)
+            plt.title("Over/Under for Category: " + inpRepOverUnder)
+            plt.ylabel("Over/Under ('-' = over)")
+            plt.xlabel("Expense")
+            plt.legend()
+            pdf.savefig() # saves the current figure into a new page in pdf 
+            plt.close()
         conn.commit()
+        # else:
+        #     print("Date does not exist, please try again or add new expense\n")
+        # printReportOptions()
     else:
         print("Category does not exist, please try again or add new category\n")
         printReportOptions()
@@ -564,7 +584,7 @@ def exportExpensesToExcel():
     dfTableExp.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=10)
     workbook.close()
 
-    print("Data with 3 tables exported successfully")
+    print("Data in 4 tables exported successfully")
 
 ##################################################################
 
