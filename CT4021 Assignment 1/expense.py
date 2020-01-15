@@ -419,6 +419,15 @@ def deleteExpense():
     c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE eid=? LIMIT 1)", (inpExpense,)) #check expense exists
     record = c.fetchone()
     if record[0] == 1: #only works if expense exists
+        #create dataframe of expense cost
+        avgCost = pd.read_sql_query("SELECT (cost) FROM expenses WHERE eid=('"+ inpExpense +"')", conn)
+        #dataframe for total
+        totCost = pd.read_sql_query("SELECT SUM(cost) FROM expenses WHERE category=( SELECT (category) FROM expenses WHERE eid=('" + inpExpense + "') LIMIT 1)", conn)
+        #create dataframe of category budget
+        avgBudget = pd.read_sql_query("SELECT (budget) FROM categories WHERE name=( SELECT (category) FROM expenses WHERE eid=('" + inpExpense + "') LIMIT 1) LIMIT 1", conn)
+        totExpense = (avgBudget.iloc[0,0] - (totCost.iloc[0,0] - avgCost.iloc[0,0]) ) #total over/under for category
+        #update total over/under for each expense in category
+        c.execute("UPDATE expenses SET (catTotal) = ('"+ str(round(totExpense, 2)) +"') WHERE category=( SELECT (category) FROM expenses WHERE eid=('" + inpExpense + "') LIMIT 1)") #value must be str before inserting  
         c.execute("DELETE FROM expenses WHERE eid = ('"+ inpExpense +"')")
         conn.commit()
         print("Expense has been deleted\n")
