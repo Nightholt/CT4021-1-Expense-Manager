@@ -25,7 +25,7 @@ options = {
     "4": " - Report Options",
     "e": " - Export to Excel",
     "o": " - See these options again",
-    "q": " - Quit\n"
+    "q": " - Quit from any menu\n"
 }
 
 # dictionary for income options, called by printIncomeOptions
@@ -85,7 +85,7 @@ def printOptions():
         print(key + val)
     selectedOption = input("Select an option by its key: ")
     handleOption(selectedOption)
-    if selectedOption == "q": #close db and quit program
+    if selectedOption == "q": #close db and quit program if 'q' pressed
         conn.close() 
         sys.exit(0)
 
@@ -207,36 +207,38 @@ def handleOptionReport(selectedRepOption):
 
 ###################### income functions ##########################
 
+# func to print income table for user to select from that looks nice
 def tableIncome():
     table = pd.read_sql_query("SELECT * FROM mIncome", conn)
     print(table)
     conn.commit()
 
+# function to calculate total income and insert into total column
 def updateTotal():
     incomeTotal = pd.read_sql_query("SELECT SUM(income) FROM mIncome", conn)
     c.execute("UPDATE mIncome SET (total) = ('" + str(incomeTotal.iloc[0,0]) + "')")
 
+# add new income
 def setMonthlyIncome():
     print(" setMonthlyIncome called\n")
-    inpSource = input("Enter income source: ")
+    inpSource = input("Enter name of source: ")
     inpIncome = input("Enter monthly income: £")
-    c.execute("INSERT INTO mIncome (source) VALUES ('" + inpSource + "')")
-    c.execute("UPDATE mIncome SET (income) = ('" + inpIncome +"') WHERE source = ('" + inpSource + "')")
-    updateTotal()
+    c.execute("INSERT INTO mIncome (source, income) VALUES ('" + inpSource + "', '" + inpIncome +"')") #insert user inputs into correct columns in db
+    updateTotal() #called to calculate total
     conn.commit()
     print("Income has been saved\n")
-    printOptions()
+    printOptions() #back to main menu
    
-
+# update existing income
 def updateMonthlyIncome():
     print(" updateMonthlyIncome called\n")
-    tableIncome()
-    inpSource = input("\nEnter income source to update: ")
-    c.execute("SELECT EXISTS(SELECT 1 FROM mIncome WHERE source=? LIMIT 1)", (inpSource,))
+    tableIncome() #call table for user to see what sources to choose from
+    inpSource = input("\nEnter source name to update by mid: ")
+    c.execute("SELECT EXISTS(SELECT 1 FROM mIncome WHERE mid=? LIMIT 1)", (inpSource,)) #check input is valid, otherwise back to menu
     record = c.fetchone()
-    if record[0] == 1:
+    if record[0] == 1: #only works if source exists
         inpIncome = input("Enter a new income: £")
-        c.execute("UPDATE mIncome SET (income) = (" + inpIncome +") WHERE source = ('" + inpSource + "')")
+        c.execute("UPDATE mIncome SET (income) = (" + inpIncome +") WHERE mid = ('" + inpSource + "')") #replace old value with new
         updateTotal()
         print("Income has been updated\n")
         printOptions()
@@ -247,12 +249,12 @@ def updateMonthlyIncome():
 
 def deleteMonthlyIncome():
     print(" deleteMonthlyIncome called\n")
-    tableIncome()
+    tableIncome() #call table for user to see what sources to choose from
     inpSource = input("\nEnter income source to delete by mid: ")
-    c.execute("SELECT EXISTS(SELECT 1 FROM mIncome WHERE mid=? LIMIT 1)", (inpSource,))
+    c.execute("SELECT EXISTS(SELECT 1 FROM mIncome WHERE mid=? LIMIT 1)", (inpSource,)) #check valid input
     record = c.fetchone()
-    if record[0] == 1:
-        c.execute("DELETE FROM mIncome WHERE mid = ('" + inpSource + "')")
+    if record[0] == 1: #only works if source exists
+        c.execute("DELETE FROM mIncome WHERE mid = ('" + inpSource + "')") #delete matching entry
         updateTotal()
         conn.commit()
         print("Income source has been deleted\n")
@@ -263,34 +265,31 @@ def deleteMonthlyIncome():
 
 ###################### category functions ##########################
 
-
+# func to print categories for user to select from that looks nice
 def tableCategory():
     table = pd.read_sql_query("SELECT (name) FROM categories", conn)
     print(table)
     conn.commit()
 
-
+# add new category
 def addNewCategory():
     print(" addNewCategory called\n")
-    # get user input
     inpCategory = input("Enter new category: ")
-    # and save to db category table
-    c.execute("INSERT INTO categories (name) VALUES ('" + inpCategory + "')")
+    c.execute("INSERT INTO categories (name) VALUES ('" + inpCategory + "')") #save to db category table in name column
     conn.commit()
     print("New category has been saved\n")
-    printOptions()
+    printOptions() #back to main
 
-
+# update existing category
 def updateCategories():
     print(" updateCategories called\n")
-    tableCategory()
+    tableCategory() #call table for user to see what categories to choose from
     inpCategory = input("\nEnter category to update: ")
-    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,)) #check input exists
     record = c.fetchone()
-    if record[0] == 1:
+    if record[0] == 1: #only works if category exists
         inpNewCategory = input("Enter new category name: ")
-        c.execute("UPDATE categories SET (name) = ('" +
-                  inpNewCategory + "') WHERE name = ('" + inpCategory + "')")
+        c.execute("UPDATE categories SET (name) = ('"+  inpNewCategory +"') WHERE name = ('"+ inpCategory +"')") #replce previous value with new
         conn.commit()
         print("Category has been updated\n")
         printOptions()
@@ -298,16 +297,15 @@ def updateCategories():
         print("Category does not exist, please try again\n")
         printCategoryOptions()
 
-
+# delete existing category
 def deleteCategories():
     print(" deleteCategories called\n")
-    tableCategory()
+    tableCategory() #call table for user to see what categories to choose from
     inpCategory = input("\nEnter category to delete: ")
-    c.execute(
-        "SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
     record = c.fetchone()
-    if record[0] == 1:
-        c.execute("DELETE FROM categories WHERE name = ('" + inpCategory + "')")
+    if record[0] == 1: #only works if category exists
+        c.execute("DELETE FROM categories WHERE name = ('"+ inpCategory +"')")
         conn.commit()
         print("Category has been deleted\n")
         printOptions()
@@ -315,21 +313,22 @@ def deleteCategories():
         print("Category does not exist, please try again\n")
         printCategoryOptions()
 
-
-# get input from user of the catgeory and budget to set it against
+# set/update budget of category
 def setCategoryBudget():
     print(" setCategoryBudget called\n")
-    tableCategory()
-    inpCategory = input("\nEnter category to add a budget to: ")
-    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
-    if record[0] == 1:
+    tableCategory() #call table for user to see what categories to choose from
+    inpCategory = input("\nEnter category to add/update a budget for: ")
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,)) #check exists
+    record = c.fetchone()
+    if record[0] == 1: #only works if category exists
         inpBudget = input("Enter a budget: £")
-        c.execute("UPDATE categories SET (budget) = ('" + inpBudget + "') WHERE name = ('" + inpCategory + "')")
+        #budget column updated where category name matches
+        c.execute("UPDATE categories SET (budget) = ('"+ inpBudget +"') WHERE name = ('"+ inpCategory +"')") 
         conn.commit()
         print("budget has been saved\n")
         printOptions()
     else:
-        print("Category does not exist, please enter a valid category\n")
+        print("Category does not exist, please try again or add new category\n")
         printCategoryOptions()
 
 
@@ -341,57 +340,67 @@ def tableExpense():
     print(table)
     conn.commit()
 
-
+# add expense with category
 def addCategoryExpense():
     print(" addCategoryExpense called\n")
     inpExpense = input("Enter expense name: ")
-    tableCategory()
+    tableCategory() #call table for user to see what categories to choose from
     inpCategory = input("\nEnter category to add expense to: ")
     inpCost = input("Enter expense cost: ")
     inpDate = input("Enter expense date(YYYY-MM-DD): ")
-    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,)) #check category exists
     record = c.fetchone()
-    if record[0] == 1:
+    if record[0] == 1 and len(inpDate) == 10 and ("-", "-" in inpDate): #only works if category exists and date is correct
+        #insert new values
         c.execute("INSERT INTO expenses (name, category, cost, date) VALUES ('" + inpExpense + "', '" + inpCategory + "', '" + inpCost + "', '" + inpDate + "')")
+        #create dataframe of expense cost
         avgCost = pd.read_sql_query("SELECT (cost) FROM expenses WHERE name=('" + inpExpense + "')", conn)
+        #dataframe for total
         totCost = pd.read_sql_query("SELECT SUM(cost) FROM expenses WHERE category=('"+ inpCategory +"')", conn)
+        #create dataframe of category budget
         avgBudget = pd.read_sql_query("SELECT (budget) FROM categories WHERE name=('" + inpCategory + "') LIMIT 1", conn)
-        avgExpense = (avgBudget.iloc[0,0] - avgCost.iloc[0,0])
-        totExpense = (avgBudget.iloc[0,0] - totCost.iloc[0,0])
-        c.execute("UPDATE expenses SET (overUnder) = ('"+ str(round(avgExpense, 2)) +"') WHERE name=('"+ inpExpense +"')")
-        c.execute("UPDATE expenses SET (catTotal) = ('"+ str(round(totExpense, 2)) +"') WHERE category=('"+ inpCategory +"')")
+        avgExpense = (avgBudget.iloc[0,0] - avgCost.iloc[0,0]) #individual over/under for expense
+        totExpense = (avgBudget.iloc[0,0] - totCost.iloc[0,0]) #total over/under for category
+        #update individual over/under for expense
+        c.execute("UPDATE expenses SET (overUnder) = ('"+ str(round(avgExpense, 2)) +"') WHERE name=('"+ inpExpense +"')") #value must be str before inserting
+        #update total over/under for each expense in category
+        c.execute("UPDATE expenses SET (catTotal) = ('"+ str(round(totExpense, 2)) +"') WHERE category=('"+ inpCategory +"')") #value must be str before inserting
         conn.commit()
         print("New expense has been saved\n")
         printOptions()
     else:
-        print("Category does not exist, please try again or add new category\n")
+        print("Invalid category or date, please try again\n")
         printExpenseOptions()
-    # get input from user of the category and expense and date
-    # save to the db
 
 
 def updateExpense():
     print(" updateExpense called\n")
-    tableExpense()
+    tableExpense() #call table for user to see what expenses to choose from
     inpExpense = input("\nEnter expense to update by eid: ")
     c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE eid=? LIMIT 1)", (inpExpense,))
     record = c.fetchone()
-    if record[0] == 1:
+    if record[0] == 1: #only works if expense exists
         inpNewExpName = input("Enter new expense name: ")
         tableCategory()
         inpNewExpCat = input("Enter new expense category: ")
         inpNewExpCost = input("Enter new expense cost: ")
-        c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpNewExpCat,))
+        c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpNewExpCat,)) #check exists
         record = c.fetchone()
-        if record[0] == 1:
+        if record[0] == 1: #only works if category exists
+            #replace old values with new
             c.execute("UPDATE expenses SET (name, category, cost) = ('"+ inpNewExpName +"', '"+ inpNewExpCat +"', '"+ inpNewExpCost +"') WHERE eid = ('"+ inpExpense +"')")
+            #create dataframe of expense cost
             avgCost = pd.read_sql_query("SELECT (cost) FROM expenses WHERE name=('"+ inpNewExpName +"')", conn)
+            #dataframe for total
             totCost = pd.read_sql_query("SELECT SUM(cost) FROM expenses WHERE category=('"+ inpNewExpCat +"')", conn)
+            #create dataframe of category budget
             avgBudget = pd.read_sql_query("SELECT (budget) FROM categories WHERE name=('" + inpNewExpCat + "') LIMIT 1", conn)
-            avgExpense = (avgBudget.iloc[0,0] - avgCost.iloc[0,0])
-            totExpense = (avgBudget.iloc[0,0] - totCost.iloc[0,0])
-            c.execute("UPDATE expenses SET (overUnder) = ('"+ str(round(avgExpense, 2)) +"') WHERE name=('"+ inpNewExpName +"')")
-            c.execute("UPDATE expenses SET (catTotal) = ('"+ str(round(totExpense, 2)) +"') WHERE category=('"+ inpNewExpCat +"')")
+            avgExpense = (avgBudget.iloc[0,0] - avgCost.iloc[0,0]) #individual over/under for expense
+            totExpense = (avgBudget.iloc[0,0] - totCost.iloc[0,0]) #total over/under for category
+            #update individual over/under for expense
+            c.execute("UPDATE expenses SET (overUnder) = ('"+ str(round(avgExpense, 2)) +"') WHERE name=('"+ inpNewExpName +"')") #value must be str before inserting
+            #update total over/under for each expense in category
+            c.execute("UPDATE expenses SET (catTotal) = ('"+ str(round(totExpense, 2)) +"') WHERE category=('"+ inpNewExpCat +"')") #value must be str before inserting
             conn.commit()
             print("Expense has been updated\n")
             printOptions()
@@ -405,12 +414,12 @@ def updateExpense():
 
 def deleteExpense():
     print(" deleteExpense called\n")
-    tableExpense()
-    inpExpense = input("\nEnter expense to delete (case sensitive): ")
-    c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
+    tableExpense() #call table for user to see what expenses to choose from
+    inpExpense = input("\nEnter expense to delete by eid: ")
+    c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE eid=? LIMIT 1)", (inpExpense,)) #check expense exists
     record = c.fetchone()
-    if record[0] == 1:
-        c.execute("DELETE FROM expenses WHERE name = ('" + inpExpense + "')")
+    if record[0] == 1: #only works if expense exists
+        c.execute("DELETE FROM expenses WHERE eid = ('"+ inpExpense +"')")
         conn.commit()
         print("Expense has been deleted\n")
         printOptions()
@@ -421,70 +430,74 @@ def deleteExpense():
 
 ###################### report functions ##########################
 
+#create graph of all expenses
 def graphExpense():
     print(" graphExpense called\n")
-    dfTableExp = pd.read_sql_query("SELECT * FROM expenses", conn)
-    with PdfPages("ExpenseReport.pdf") as pdf:
-        dfTableExp.plot(kind='bar', x='name', y='cost', color='red')
+    dfTableExp = pd.read_sql_query("SELECT * FROM expenses", conn) #create dataframe to plot from
+    with PdfPages("All Expenses.pdf") as pdf:
+        dfTableExp.plot(kind='bar', x='name', y='cost', color='red') #define graph type, axis and colour
         plt.title("Graph for all Expenses")
         plt.ylabel("Cost (£)")
         plt.xlabel("Expense")
         plt.legend()
-        pdf.savefig()  # saves the current figure into a pdf page
-        plt.close()
+        pdf.savefig() #saves figure into a pdf page
+        plt.close() #close figure
     conn.commit()
-    print("Report generated in directory\n")
+    print("Report generated in reports folder\n")
     printOptions()
-    # get input from user of specified category
-    # query db for expenses in specified category
 
+#expense report by user input of day, week, month, year
 def printPDFReportDWMY():
     print(" printPDFReportDWMY called\n")
-    for key in reportDateOptions:
+    for key in reportDateOptions: #print options for report
         val = reportDateOptions[key]
         print(key + val)
     selectedRepDateOption = input("Select an option by its key: ")
-    if selectedRepDateOption == "q":
+    if selectedRepDateOption == "q": #close db and quit program if 'p' pressed
         conn.close()
         sys.exit(0)
-    elif selectedRepDateOption == "1":
-        #year func
-        #inpYear = input("Enter year to view expenses of (YYYY): ")
+    elif selectedRepDateOption == "1": #if option 1 selected
+        #get input for range to select from
         inpRepDate1 = input("Enter date to view over/under range from (YYYY-MM-DD): ")
         inpRepDate2 = input("Enter date to view over/under range to (YYYY-MM-DD): ")
-        if len(inpRepDate1) and len(inpRepDate2) != 10:
+        if len(inpRepDate1) and len(inpRepDate2) != 10 and ("-", "-" in inpRepDate1 and inpRepDate2): #only works if dates are correct
             print("Invalid date, please try again")
             printReportOptions()
         else:
+            #select all expense values between user defined range into dataframe
             dfTableDate = pd.read_sql_query("SELECT * FROM expenses WHERE date BETWEEN '"+ inpRepDate1 +"' AND '"+ inpRepDate2 +"' ", conn)
+            #create pdf of graph from dataframe 
             with PdfPages("reports/Expenses "+ inpRepDate1 +" to "+ inpRepDate2 +".pdf") as pdf:
-                dfTableDate.plot(kind='bar', x='name', y='cost', color='red')
-                plt.title("Expenses "+ inpRepDate1 +" to "+ inpRepDate2 +"")
+                dfTableDate.plot(kind='bar', x='name', y='cost', color='red') #define figure type, axis and colour
+                plt.title("Expenses from "+ inpRepDate1 +" to "+ inpRepDate2 +"")
                 plt.ylabel("Cost (£)")
                 plt.xlabel("Expense")
                 plt.legend()
-                pdf.savefig()
-                plt.close()
+                pdf.savefig() #save figure
+                plt.close() #close figure
             conn.commit()
-            print("Report generated in directory\n")
+            print("Report generated in reports folder\n")
             printOptions()
 
-    elif selectedRepDateOption == "2":
+    elif selectedRepDateOption == "2": #if option 2 selected
+        #get input for exact day to view expenses from
         inpDay = input("Enter day to view expenses of (YYYY-MM-DD): ")
-        c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE date=? LIMIT 1)", (inpDay,))
+        c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE date=? LIMIT 1)", (inpDay,)) #check date exists
         record = c.fetchone()
-        if record[0] == 1:
+        if record[0] == 1: #only works if date exists
+            #get all entries with matching date and add to dataframe
             dfDateExp = pd.read_sql_query("SELECT * FROM expenses WHERE date=('" + inpDay + "')", conn)
-            with PdfPages("reports/"+ inpDay +" Expense Report.pdf") as pdf:
-                dfDateExp.plot(kind='bar', x='name', y='cost', color='red')
+            #create pdf of graph from dataframe 
+            with PdfPages("reports/"+ inpDay +" Expenses.pdf") as pdf:
+                dfDateExp.plot(kind='bar', x='name', y='cost', color='red') #define figure type, axis and colour 
                 plt.title("Expenses from "+ inpDay +"")
                 plt.ylabel("Cost (£)")
                 plt.xlabel("Expense")
                 plt.legend()
-                pdf.savefig()
-                plt.close()
+                pdf.savefig() #save figure
+                plt.close() #close figure
             conn.commit()
-            print("Report generated in directory\n")
+            print("Report generated in reports folder\n")
             printOptions()
         else:
             print("Date does not exist, please try again or add expense")
@@ -492,26 +505,26 @@ def printPDFReportDWMY():
 
     elif selectedRepDateOption == "b":
         printReportOptions()
-    # get input from user of the date
-    # query db category expenses and then print the list to a pdf using panda/matploblib ?
 
-
+#expense report by user selected category
 def printPDFReportByCategory():
     print(" printPDFReportByCategory called\n")
-    tableCategory()
+    tableCategory() #call table for user to see what categories to choose from
     inpRepCat = input("Enter category to view expense report of: ")
-    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpRepCat,))
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpRepCat,)) #check exists
     record = c.fetchone()
-    if record[0] == 1:
+    if record[0] == 1: #only works if category exists
+        #get all values with matching category and add to df
         dfTableExpCat = pd.read_sql_query("SELECT * FROM expenses WHERE category=('" + inpRepCat + "')", conn)
-        with PdfPages("/reports/"+ inpRepCat +" Expense Report.pdf") as pdf:
-            dfTableExpCat.plot(kind='bar', x='name', y='cost', color='blue')
+        #create pdf of graph from dataframe
+        with PdfPages("/reports/"+ inpRepCat +" Expenses.pdf") as pdf:
+            dfTableExpCat.plot(kind='bar', x='name', y='cost', color='blue')  #define figure type, axis and colour
             plt.title("Expenses for Category: " + inpRepCat)
             plt.ylabel("Cost (£)")
             plt.xlabel("Expense")
             plt.legend()
-            pdf.savefig()  # saves the current figure into a new page in pdf 
-            plt.close()
+            pdf.savefig()  #save figure
+            plt.close() #close figure
         conn.commit()
         print("Report generated in reports folder\n")
         printOptions()
@@ -521,60 +534,64 @@ def printPDFReportByCategory():
     # get input from user of specified category
     # query db category expenses and then print the list to a pdf using panda/matploblib ?
 
+#report of over/under for category in specified date range
 def avgOverUnder():
     print(" avgOverUnder called\n")
-    tableCategory()
+    tableCategory() #call table for user to see what categories to choose from
     inpRepOverUnder = input("Enter category to view over/under report of: ")
     inpRepDate1 = input("Enter date to view over/under range from (YYYY-MM-DD): ")
     inpRepDate2 = input("Enter date to view over/under range to (YYYY-MM-DD): ")
-    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpRepOverUnder,))
+    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpRepOverUnder,)) #check exists
     record = c.fetchone()
-    if record[0] == 1:
+    if record[0] == 1: #only works if category exists
+        #get all values with matching category in specific time frame and add to df 
         dfTableDate = pd.read_sql_query("SELECT * FROM expenses WHERE category =('"+ inpRepOverUnder +"') AND date BETWEEN '"+ inpRepDate1 +"' AND '"+ inpRepDate2 +"' ", conn)
+        #create pdf of graph from dataframe
         with PdfPages("OverUnder "+ inpRepOverUnder +".pdf") as pdf:
-            # colours = ['blue' if ( y >0) else 'red']
-            dfTableDate.plot(kind='bar', x='name', y='overUnder', color= 'blue')
+            dfTableDate.plot(kind='bar', x='category', y='catTotal', color= 'blue')  #define figure type, axis and colour
             plt.title("Over/Under for Category: " + inpRepOverUnder)
             plt.ylabel("Over/Under ('-' = over)")
             plt.xlabel("Expense")
             plt.legend()
-            pdf.savefig() # saves the current figure into a new page in pdf 
-            plt.close()
+            pdf.savefig() #save figure
+            plt.close() #close figure
         conn.commit()
-        print("Report generated in directory\n")
+        print("Report generated in reports folder\n")
         printOptions()
     else:
         print("Category does not exist, please try again or add new category\n")
         printReportOptions()
 
-
+#export all data to excel
 def exportExpensesToExcel():
     print(" exportExpensesToExcel called\n")
+    #add each db table into a df 
     dfTableInc = pd.read_sql_query("SELECT * FROM mIncome", conn)
     dfTableCat = pd.read_sql_query("SELECT * FROM categories", conn)
     dfTableExp = pd.read_sql_query("SELECT * FROM expenses", conn)
     conn.commit()
 
-    writer = pd.ExcelWriter('reports/expenseSheet.xlsx', engine='xlsxwriter')
+    #use module to export to excel
+    writer = pd.ExcelWriter('reports/Expense Sheet.xlsx', engine='xlsxwriter')
     workbook = writer.book
-    worksheet = workbook.add_worksheet('Expense Data')
-    writer.sheets['Expense Data'] = worksheet
-    dfTableInc.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=0)
+    worksheet = workbook.add_worksheet('Expense Data') #worksheet name
+    writer.sheets['Expense Data'] = worksheet #define where to add data
+    #start each table with one gap between
+    dfTableInc.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=0) 
     dfTableCat.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=6)
     dfTableExp.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=11)
     workbook.close()
 
-    print("Data in 4 tables exported successfully\n")
+    print("Data in 4 tables exported successfully\n Viewable in reports folder")
     printOptions()
 
 ##################################################################
 
 ################### start program ################################
 
-
+#what user sees when program first launches
 print("Welcome to your Expense Manager")
 print("Please choose from the following options:\n")
 printOptions()
-
 
 ##################################################################
