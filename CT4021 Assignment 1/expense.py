@@ -1,14 +1,11 @@
 import sqlite3
 from sqlite3 import Error
 import sys
-import pandas as pd
-from pandas import DataFrame as df
 import pdfkit as pdf
-from operator import sub
-#import locale
-#from openpyxl.workbook import Workbook
 import xlsxwriter
 
+import pandas as pd
+from pandas import DataFrame as df
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -18,8 +15,10 @@ conn = sqlite3.connect('expensesqlite.db')
 c = conn.cursor()
 
 ######################### print data ############################
-
+#navigation of program
+# dictionary for main options, called by printOptions
 options = {
+    "Main Menu\n"
     "1": " - Manage Income",
     "2": " - Manage Expense Categories",
     "3": " - Manage Expenses",
@@ -29,6 +28,7 @@ options = {
     "q": " - Quit\n"
 }
 
+# dictionary for income options, called by printIncomeOptions
 incomeOptions = {
     "\nManage Incomes\n"
     "1": " - Set monthly income",
@@ -37,6 +37,7 @@ incomeOptions = {
     "b": " - Back\n"
 }
 
+# dictionary for category options, called by printCategoryOptions
 categoryOptions = {
     "\nManage Expense Categories\n"
     "1": " - Add new category",
@@ -46,6 +47,7 @@ categoryOptions = {
     "b": " - Back\n"
 }
 
+# dictionary for expense options, called by printExpenseOptions
 expenseOptions = {
     "\nManage Expenses\n"
     "1": " - Add new expense",
@@ -54,6 +56,7 @@ expenseOptions = {
     "b": " - Back\n"
 }
 
+# dictionary for report options, called by printReportOptions
 reportOptions = {
     "\nReport Options\n"
     "1": " - Print all expenses report to pdf",
@@ -63,6 +66,7 @@ reportOptions = {
     "b": " - Back\n"
 }
 
+# dictionary for report by date options, called by printReportbyDWMY
 reportDateOptions = {
     "\nExpense Report by Date Options\n"
     "1": " - View expense report by range (year/month)",
@@ -73,30 +77,19 @@ reportDateOptions = {
 ##################################################################
 
 ####################### print options ############################
-
-
-# def printOptionsFunc(action, optionsArr):
-#     for key in optionsArr:
-#         val = optionsArr[key]
-#         print(key + val)
-#     selectedOption = input("Select an option by its key: ")
-#     handleOptions(action, selectedOption)
-#     if selectedOption == "q":
-#         conn.close()
-#         sys.exit(0)
-
-
+# loops called from functions to navigate the program and exit 
+#main menu
 def printOptions():
     for key in options:
         val = options[key]
         print(key + val)
     selectedOption = input("Select an option by its key: ")
     handleOption(selectedOption)
-    if selectedOption == "q":
-        conn.close()
+    if selectedOption == "q": #close db and quit program
+        conn.close() 
         sys.exit(0)
 
-
+#income menu
 def printIncomeOptions():
     for key in incomeOptions:
         val = incomeOptions[key]
@@ -107,7 +100,7 @@ def printIncomeOptions():
         conn.close()
         sys.exit(0)
 
-
+#category menu
 def printCategoryOptions():
     for key in categoryOptions:
         val = categoryOptions[key]
@@ -118,7 +111,7 @@ def printCategoryOptions():
         conn.close()
         sys.exit(0)
 
-
+#expense menu
 def printExpenseOptions():
     for key in expenseOptions:
         val = expenseOptions[key]
@@ -129,7 +122,7 @@ def printExpenseOptions():
         conn.close()
         sys.exit(0)
 
-
+#report menu
 def printReportOptions():
     for key in reportOptions:
         val = reportOptions[key]
@@ -145,18 +138,6 @@ def printReportOptions():
 
 ###################### handle options ############################
 
-
-# def handleOptions(action, option):
-#     if action == "standard"
-#         handleOption(option):
-#     elif action == "income"
-#         handleOptionIncome(option):
-#     elif action == "category"
-#         handleOptionCategory(option):
-#     elif action == "expense"
-#         handleOptionExpense(option):
-#     elif action == "report"
-#         handleOptionReport(option):
    
 # Decide which menu is called based on user input
 def handleOption(selectedOption):
@@ -231,6 +212,9 @@ def tableIncome():
     print(table)
     conn.commit()
 
+def updateTotal():
+    incomeTotal = pd.read_sql_query("SELECT SUM(income) FROM mIncome", conn)
+    c.execute("UPDATE mIncome SET (total) = ('" + str(incomeTotal.iloc[0,0]) + "')")
 
 def setMonthlyIncome():
     print(" setMonthlyIncome called\n")
@@ -238,20 +222,11 @@ def setMonthlyIncome():
     inpIncome = input("Enter monthly income: £")
     c.execute("INSERT INTO mIncome (source) VALUES ('" + inpSource + "')")
     c.execute("UPDATE mIncome SET (income) = ('" + inpIncome +"') WHERE source = ('" + inpSource + "')")
-    incomeTotal = c.execute("SELECT source,SUM(income) FROM mIncome as total")
-    #c.execute("INSERT INTO mIncome (income) VALUES ('" + incomeTotal + "')")
-    print(incomeTotal)
+    updateTotal()
     conn.commit()
-    print("Source of income has been saved")
-    inpMult = input("To add another source of income, enter 'y',\n otherwise press keyboard: ")
-    if inpMult == ('y' or 'Y'):
-        setMonthlyIncome()
-    else:
-        printOptions()
-    # test to see if income has been set already?
-    # if it has been set ask the user to confirm if they want to overwrite it ?
-    # or set it/reset it
-
+    print("Income has been saved\n")
+    printOptions()
+   
 
 def updateMonthlyIncome():
     print(" updateMonthlyIncome called\n")
@@ -262,26 +237,29 @@ def updateMonthlyIncome():
     if record[0] == 1:
         inpIncome = input("Enter a new income: £")
         c.execute("UPDATE mIncome SET (income) = (" + inpIncome +") WHERE source = ('" + inpSource + "')")
-        conn.commit()
-        print("Income has been updated")
+        updateTotal()
+        print("Income has been updated\n")
+        printOptions()
     else:
-        print("Source does not exist, please try again\n")
-        updateMonthlyIncome()
+        print("Source does not exist, please try again or add new source\n")
+        printIncomeOptions()
 
 
 def deleteMonthlyIncome():
     print(" deleteMonthlyIncome called\n")
     tableIncome()
-    inpSource = input("\nEnter income source to delete: ")
-    c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpSource,))
+    inpSource = input("\nEnter income source to delete by mid: ")
+    c.execute("SELECT EXISTS(SELECT 1 FROM mIncome WHERE mid=? LIMIT 1)", (inpSource,))
     record = c.fetchone()
     if record[0] == 1:
-        c.execute("DELETE FROM mIncome WHERE name = ('" + inpSource + "')")
+        c.execute("DELETE FROM mIncome WHERE mid = ('" + inpSource + "')")
+        updateTotal()
         conn.commit()
-        print("Income source has been deleted")
+        print("Income source has been deleted\n")
+        printOptions()
     else:
-        print("Source does not exist, please try again\n")
-        deleteMonthlyIncome()
+        print("Source does not exist, please try again or add new source\n")
+        printIncomeOptions()
 
 ###################### category functions ##########################
 
@@ -299,7 +277,8 @@ def addNewCategory():
     # and save to db category table
     c.execute("INSERT INTO categories (name) VALUES ('" + inpCategory + "')")
     conn.commit()
-    print("Category '" + inpCategory + "' has been saved")
+    print("New category has been saved\n")
+    printOptions()
 
 
 def updateCategories():
@@ -313,10 +292,11 @@ def updateCategories():
         c.execute("UPDATE categories SET (name) = ('" +
                   inpNewCategory + "') WHERE name = ('" + inpCategory + "')")
         conn.commit()
-        print("Category has been updated")
+        print("Category has been updated\n")
+        printOptions()
     else:
         print("Category does not exist, please try again\n")
-        updateCategories()
+        printCategoryOptions()
 
 
 def deleteCategories():
@@ -329,10 +309,11 @@ def deleteCategories():
     if record[0] == 1:
         c.execute("DELETE FROM categories WHERE name = ('" + inpCategory + "')")
         conn.commit()
-        print("Category has been deleted")
+        print("Category has been deleted\n")
+        printOptions()
     else:
         print("Category does not exist, please try again\n")
-        deleteCategories()
+        printCategoryOptions()
 
 
 # get input from user of the catgeory and budget to set it against
@@ -345,16 +326,18 @@ def setCategoryBudget():
         inpBudget = input("Enter a budget: £")
         c.execute("UPDATE categories SET (budget) = ('" + inpBudget + "') WHERE name = ('" + inpCategory + "')")
         conn.commit()
-        print("budget has been saved")
+        print("budget has been saved\n")
+        printOptions()
     else:
         print("Category does not exist, please enter a valid category\n")
-        setCategoryBudget()
+        printCategoryOptions()
 
 
 ###################### expense functions ##########################
 
+# func to print expenses for user to select from that looks nice
 def tableExpense():
-    table = pd.read_sql_query("SELECT * FROM expenses", conn)
+    table = pd.read_sql_query("SELECT * FROM expenses", conn) # creates dataframe from db selection
     print(table)
     conn.commit()
 
@@ -369,14 +352,17 @@ def addCategoryExpense():
     c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,))
     record = c.fetchone()
     if record[0] == 1:
+        c.execute("INSERT INTO expenses (name, category, cost, date) VALUES ('" + inpExpense + "', '" + inpCategory + "', '" + inpCost + "', '" + inpDate + "')")
         avgCost = pd.read_sql_query("SELECT (cost) FROM expenses WHERE name=('" + inpExpense + "')", conn)
-        totCost = pd.read_sql_query("SELECT SUM(cost) FROM expenses WHERE category=('"+ inpNewExpCat +"')", conn)
+        totCost = pd.read_sql_query("SELECT SUM(cost) FROM expenses WHERE category=('"+ inpCategory +"')", conn)
         avgBudget = pd.read_sql_query("SELECT (budget) FROM categories WHERE name=('" + inpCategory + "') LIMIT 1", conn)
         avgExpense = (avgBudget.iloc[0,0] - avgCost.iloc[0,0])
         totExpense = (avgBudget.iloc[0,0] - totCost.iloc[0,0])
-        c.execute("INSERT INTO expenses (name, category, cost, date) VALUES ('" + inpExpense + "', '" + inpCategory + "', '" + inpCost + "', '" + inpDate + "')")
+        c.execute("UPDATE expenses SET (overUnder) = ('"+ str(round(avgExpense, 2)) +"') WHERE name=('"+ inpExpense +"')")
+        c.execute("UPDATE expenses SET (catTotal) = ('"+ str(round(totExpense, 2)) +"') WHERE category=('"+ inpCategory +"')")
         conn.commit()
-        print("New expense has been saved")
+        print("New expense has been saved\n")
+        printOptions()
     else:
         print("Category does not exist, please try again or add new category\n")
         printExpenseOptions()
@@ -387,8 +373,8 @@ def addCategoryExpense():
 def updateExpense():
     print(" updateExpense called\n")
     tableExpense()
-    inpExpense = input("\nEnter expense to update (case sensitive): ")
-    c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
+    inpExpense = input("\nEnter expense to update by eid: ")
+    c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE eid=? LIMIT 1)", (inpExpense,))
     record = c.fetchone()
     if record[0] == 1:
         inpNewExpName = input("Enter new expense name: ")
@@ -398,18 +384,16 @@ def updateExpense():
         c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpNewExpCat,))
         record = c.fetchone()
         if record[0] == 1:
+            c.execute("UPDATE expenses SET (name, category, cost) = ('"+ inpNewExpName +"', '"+ inpNewExpCat +"', '"+ inpNewExpCost +"') WHERE eid = ('"+ inpExpense +"')")
             avgCost = pd.read_sql_query("SELECT (cost) FROM expenses WHERE name=('"+ inpNewExpName +"')", conn)
             totCost = pd.read_sql_query("SELECT SUM(cost) FROM expenses WHERE category=('"+ inpNewExpCat +"')", conn)
             avgBudget = pd.read_sql_query("SELECT (budget) FROM categories WHERE name=('" + inpNewExpCat + "') LIMIT 1", conn)
             avgExpense = (avgBudget.iloc[0,0] - avgCost.iloc[0,0])
             totExpense = (avgBudget.iloc[0,0] - totCost.iloc[0,0])
-            c.execute("UPDATE expenses SET (name, category, cost, overUnder) = ('"+ inpNewExpName +"', '"+ inpNewExpCat +"', '"+ inpNewExpCost +"', '"+ str(round(avgExpense, 2)) +"') WHERE name = ('"+ inpExpense +"')")
+            c.execute("UPDATE expenses SET (overUnder) = ('"+ str(round(avgExpense, 2)) +"') WHERE name=('"+ inpNewExpName +"')")
             c.execute("UPDATE expenses SET (catTotal) = ('"+ str(round(totExpense, 2)) +"') WHERE category=('"+ inpNewExpCat +"')")
-
-            # c.execute("UPDATE overUnder SET (name, category, overUnder, catTotal) = ('"+ inpNewExpName +"', '"+ inpNewExpCat +"','"+ str(round(avgExpense, 2)) +"' ,'"+ str(round(totExpense, 2)) +"') WHERE name = ('"+ inpExpense +"')")
-            # c.execute("UPDATE overUnder SET (catTotal) = ('"+ str(round(totExpense, 2)) +"') WHERE category=('"+ inpNewExpCat +"')")
             conn.commit()
-            print("Expense has been updated")
+            print("Expense has been updated\n")
             printOptions()
         else:
             print("Category does not exist, please try again or add new Category\n")
@@ -424,13 +408,15 @@ def deleteExpense():
     tableExpense()
     inpExpense = input("\nEnter expense to delete (case sensitive): ")
     c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE name=? LIMIT 1)", (inpExpense,))
+    record = c.fetchone()
     if record[0] == 1:
         c.execute("DELETE FROM expenses WHERE name = ('" + inpExpense + "')")
         conn.commit()
-        print("Expense has been deleted")
+        print("Expense has been deleted\n")
+        printOptions()
     else:
         print("Expense does not exist, please try again\n")
-        deleteExpense()
+        printExpenseOptions()
 
 
 ###################### report functions ##########################
@@ -479,10 +465,11 @@ def printPDFReportDWMY():
                 plt.legend()
                 pdf.savefig()
                 plt.close()
+            conn.commit()
+            print("Report generated in directory\n")
             printOptions()
 
     elif selectedRepDateOption == "2":
-        #day
         inpDay = input("Enter day to view expenses of (YYYY-MM-DD): ")
         c.execute("SELECT EXISTS(SELECT 1 FROM expenses WHERE date=? LIMIT 1)", (inpDay,))
         record = c.fetchone()
@@ -496,6 +483,9 @@ def printPDFReportDWMY():
                 plt.legend()
                 pdf.savefig()
                 plt.close()
+            conn.commit()
+            print("Report generated in directory\n")
+            printOptions()
         else:
             print("Date does not exist, please try again or add expense")
             printReportOptions()
@@ -551,6 +541,7 @@ def avgOverUnder():
             pdf.savefig() # saves the current figure into a new page in pdf 
             plt.close()
         conn.commit()
+        print("Report generated in directory\n")
         printOptions()
     else:
         print("Category does not exist, please try again or add new category\n")
@@ -564,16 +555,17 @@ def exportExpensesToExcel():
     dfTableExp = pd.read_sql_query("SELECT * FROM expenses", conn)
     conn.commit()
 
-    writer = pd.ExcelWriter('expenseSheet.xlsx', engine='xlsxwriter')
+    writer = pd.ExcelWriter('reports/expenseSheet.xlsx', engine='xlsxwriter')
     workbook = writer.book
     worksheet = workbook.add_worksheet('Expense Data')
     writer.sheets['Expense Data'] = worksheet
     dfTableInc.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=0)
-    dfTableCat.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=5)
-    dfTableExp.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=10)
+    dfTableCat.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=6)
+    dfTableExp.to_excel(writer, sheet_name='Expense Data',startrow=0, startcol=11)
     workbook.close()
 
-    print("Data in 4 tables exported successfully")
+    print("Data in 4 tables exported successfully\n")
+    printOptions()
 
 ##################################################################
 
@@ -584,20 +576,5 @@ print("Welcome to your Expense Manager")
 print("Please choose from the following options:\n")
 printOptions()
 
-##choose the following based on the input from user?
-# input = "standard"
-# printOptionsFunc(input, options)
-
-# input = "income"
-# printOptionsFunc(input, incomeOptions)
-
-# input = "category"
-# printOptionsFunc(input, categoryOptions)
-
-# input = "expense"
-# printOptionsFunc(input, expenseOptions)
-
-# input = "report"
-# printOptionsFunc(input, reportOptions)
 
 ##################################################################
