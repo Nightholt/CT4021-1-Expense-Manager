@@ -559,7 +559,7 @@ def avgOverUnder():
         with PdfPages("OverUnder "+ inpRepOverUnder +".pdf") as pdf:
             dfTableDate.plot(kind='bar', x='category', y='catTotal', color= 'blue')  #define figure type, axis and colour
             plt.title("Over/Under for Category: " + inpRepOverUnder)
-            plt.ylabel("Over/Under ('-' = over)")
+            plt.ylabel("Over/Under (£)")
             plt.xlabel("Expense")
             plt.legend()
             pdf.savefig() #save figure
