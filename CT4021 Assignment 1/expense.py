@@ -24,7 +24,6 @@ options = {
     "3": " - Manage Expenses",
     "4": " - Report Options",
     "e": " - Export to Excel",
-    "o": " - See these options again",
     "q": " - Quit from any menu\n"
 }
 
@@ -33,7 +32,7 @@ incomeOptions = {
     "\nManage Incomes\n"
     "1": " - Set monthly income",
     "2": " - Update current incomes",
-    "3": " - Delete  incomes",
+    "3": " - Delete incomes",
     "b": " - Back\n"
 }
 
@@ -43,7 +42,7 @@ categoryOptions = {
     "1": " - Add new category",
     "2": " - Update current categories",
     "3": " - Delete categories",
-    "4": " - Set or update budget for categories",
+    "4": " - Update budget for categories",
     "b": " - Back\n"
 }
 
@@ -151,8 +150,6 @@ def handleOption(selectedOption):
         printReportOptions()
     elif selectedOption == "e":
         exportExpensesToExcel()
-    elif selectedOption == "o":
-        printOptions()
 
 # Decide which function is called for incomes menu
 def handleOptionIncome(selectedIncOption):
@@ -267,7 +264,7 @@ def deleteMonthlyIncome():
 
 # func to print categories for user to select from that looks nice
 def tableCategory():
-    table = pd.read_sql_query("SELECT (name) FROM categories", conn)
+    table = pd.read_sql_query("SELECT * FROM categories", conn)
     print(table)
     conn.commit()
 
@@ -275,7 +272,8 @@ def tableCategory():
 def addNewCategory():
     print(" addNewCategory called\n")
     inpCategory = input("Enter new category: ")
-    c.execute("INSERT INTO categories (name) VALUES ('" + inpCategory + "')") #save to db category table in name column
+    inpBudget = input("Enter budget for new category: ")
+    c.execute("INSERT INTO categories (name, budget) VALUES ('" + inpCategory + "', '" + inpBudget + "')") #save to db category table in name and budget column
     conn.commit()
     print("New category has been saved\n")
     printOptions() #back to main
@@ -317,11 +315,11 @@ def deleteCategories():
 def setCategoryBudget():
     print(" setCategoryBudget called\n")
     tableCategory() #call table for user to see what categories to choose from
-    inpCategory = input("\nEnter category to add/update a budget for: ")
+    inpCategory = input("\nEnter category to update a budget for: ")
     c.execute("SELECT EXISTS(SELECT 1 FROM categories WHERE name=? LIMIT 1)", (inpCategory,)) #check exists
     record = c.fetchone()
     if record[0] == 1: #only works if category exists
-        inpBudget = input("Enter a budget: £")
+        inpBudget = input("Enter new budget: £")
         #budget column updated where category name matches
         c.execute("UPDATE categories SET (budget) = ('"+ inpBudget +"') WHERE name = ('"+ inpCategory +"')") 
         conn.commit()
@@ -526,7 +524,7 @@ def printPDFReportByCategory():
         #get all values with matching category and add to df
         dfTableExpCat = pd.read_sql_query("SELECT * FROM expenses WHERE category=('" + inpRepCat + "')", conn)
         #create pdf of graph from dataframe
-        with PdfPages("/reports/"+ inpRepCat +" Expenses.pdf") as pdf:
+        with PdfPages("reports/"+ inpRepCat +" Expenses.pdf") as pdf:
             dfTableExpCat.plot(kind='bar', x='name', y='cost', color='blue')  #define figure type, axis and colour
             plt.title("Expenses for Category: " + inpRepCat)
             plt.ylabel("Cost (£)")
